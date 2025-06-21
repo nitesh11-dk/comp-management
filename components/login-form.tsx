@@ -31,12 +31,36 @@ export default function LoginForm() {
   }
 
   const demoCredentials = [
-    { role: "Admin", username: "admin", password: "admin123", icon: Users },
-    { role: "Supervisor 1 (Packing)", username: "supervisor1", password: "super123", icon: UserCheck },
-    { role: "Supervisor 2 (Loading)", username: "supervisor2", password: "super456", icon: UserCheck },
-    { role: "Supervisor 3 (Maintenance)", username: "supervisor3", password: "super789", icon: UserCheck },
-    { role: "Supervisor 4 (Quality)", username: "supervisor4", password: "super321", icon: UserCheck },
-    { role: "Employee", username: "emp001", password: "emp123", icon: Building2 },
+    { role: "Admin", username: "admin", password: "admin123", icon: Users, dept: "All Access" },
+    {
+      role: "Supervisor (Packing)",
+      username: "supervisor1",
+      password: "super123",
+      icon: UserCheck,
+      dept: "Packing Dept",
+    },
+    {
+      role: "Supervisor (Production)",
+      username: "supervisor2",
+      password: "super456",
+      icon: UserCheck,
+      dept: "Production Dept",
+    },
+    {
+      role: "Supervisor (Maintenance)",
+      username: "supervisor3",
+      password: "super789",
+      icon: UserCheck,
+      dept: "Maintenance Dept",
+    },
+    {
+      role: "Supervisor (Quality)",
+      username: "supervisor4",
+      password: "super321",
+      icon: UserCheck,
+      dept: "Quality Dept",
+    },
+    { role: "Employee", username: "emp001", password: "emp123", icon: Building2, dept: "Employee Access" },
   ]
 
   return (
@@ -57,6 +81,7 @@ export default function LoginForm() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
+                  placeholder="Enter your username"
                 />
               </div>
               <div className="space-y-2">
@@ -67,6 +92,7 @@ export default function LoginForm() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  placeholder="Enter your password"
                 />
               </div>
               {error && (
@@ -92,11 +118,18 @@ export default function LoginForm() {
               return (
                 <div
                   key={cred.role}
-                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 border rounded-lg space-y-2 sm:space-y-0"
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 border rounded-lg space-y-2 sm:space-y-0 hover:bg-muted/50 cursor-pointer"
+                  onClick={() => {
+                    setUsername(cred.username)
+                    setPassword(cred.password)
+                  }}
                 >
                   <div className="flex items-center gap-2">
                     <Icon className="h-4 w-4" />
-                    <span className="font-medium text-sm sm:text-base">{cred.role}</span>
+                    <div>
+                      <span className="font-medium text-sm sm:text-base">{cred.role}</span>
+                      <p className="text-xs text-muted-foreground">{cred.dept}</p>
+                    </div>
                   </div>
                   <div className="text-xs sm:text-sm text-muted-foreground font-mono">
                     {cred.username} / {cred.password}
@@ -104,6 +137,9 @@ export default function LoginForm() {
                 </div>
               )
             })}
+            <p className="text-xs text-center text-muted-foreground mt-2">
+              Click on any credential to auto-fill the form
+            </p>
           </CardContent>
         </Card>
       </div>

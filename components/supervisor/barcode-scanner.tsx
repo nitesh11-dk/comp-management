@@ -5,14 +5,15 @@ import { dataStore } from "../../lib/data-store"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { roundTimeToNextHour } from "../../lib/time-utils"
 import BarcodeScanner from "../barcode-scanner"
-import { Scan, Clock, User, CheckCircle, XCircle, Zap, Building2 } from "lucide-react"
+import { Scan, Clock, User, CheckCircle, XCircle, Zap, Building2, AlertTriangle } from "lucide-react"
 
 export default function SupervisorBarcodeScanner() {
   const [lastScannedEmployee, setLastScannedEmployee] = useState<any>(null)
   const [message, setMessage] = useState("Ready to scan employee barcode...")
-  const [messageType, setMessageType] = useState<"success" | "error" | "info">("info")
+  const [messageType, setMessageType] = useState<"success" | "error" | "info" | "warning">("info")
   const [recentLogs, setRecentLogs] = useState<any[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
   const [isScannerActive, setIsScannerActive] = useState(false)
@@ -28,7 +29,7 @@ export default function SupervisorBarcodeScanner() {
     const user = dataStore.getCurrentUser()
     if (user && user.role === "supervisor") {
       setCurrentSupervisor(user)
-      // Supervisor can only work with their assigned department
+      // Set default category based on supervisor's assigned department
       if (user.departmentId) {
         setSelectedCategory(user.departmentId)
       }
@@ -68,6 +69,28 @@ export default function SupervisorBarcodeScanner() {
     }
   }
 
+  const playWarningSound = () => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const oscillator = audioContext.createOscillator()
+      const gainNode = audioContext.createGain()
+
+      oscillator.connect(gainNode)
+      gainNode.connect(audioContext.destination)
+
+      oscillator.frequency.value = 600
+      oscillator.type = "sine"
+
+      gainNode.gain.setValueAtTime(0.2, audioContext.currentTime)
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4)
+
+      oscillator.start(audioContext.currentTime)
+      oscillator.stop(audioContext.currentTime + 0.4)
+    } catch (error) {
+      console.warn("Audio not supported")
+    }
+  }
+
   const playErrorSound = () => {
     try {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
@@ -93,8 +116,8 @@ export default function SupervisorBarcodeScanner() {
   const processBarcodeScan = async (scannedCode: string) => {
     if (!scannedCode.trim() || isProcessing) return
 
-    if (!selectedCategory || !currentSupervisor?.departmentId) {
-      setMessage("❌ No department assigned to your account")
+    if (!selectedCategory) {
+      setMessage("❌ Please select a work category first")
       setMessageType("error")
       playErrorSound()
       return
@@ -119,23 +142,8 @@ export default function SupervisorBarcodeScanner() {
         return
       }
 
-      // Check if employee belongs to supervisor's department
-      if (employee.departmentId !== currentSupervisor.departmentId) {
-        const employeeDept = dataStore.getDepartmentById(employee.departmentId)?.name || "Unknown"
-        const supervisorDept = dataStore.getDepartmentById(currentSupervisor.departmentId)?.name || "Unknown"
-
-        setMessage(
-          `❌ Access Denied!\n${employee.name} belongs to ${employeeDept}\nYou can only scan ${supervisorDept} employees`,
-        )
-        setMessageType("error")
-        setLastScannedEmployee(null)
-        playErrorSound()
-        return
-      }
-
       setLastScannedEmployee(employee)
 
-      // Rest of the existing logic remains the same...
       // Get current time and apply rounding logic
       const now = new Date()
       const timeData = roundTimeToNextHour(now)
@@ -144,6 +152,11 @@ export default function SupervisorBarcodeScanner() {
       // Check last attendance log for this employee
       const todayLog = dataStore.getAttendanceLogs(employee.id, today)[0]
 
+      // Check if employee belongs to different department
+      const isDifferentDepartment = employee.departmentId !== selectedCategory
+      const employeeDept = dataStore.getDepartmentById(employee.departmentId)?.name || "Unknown"
+      const workingDept = dataStore.getDepartmentById(selectedCategory)?.name || "Unknown"
+
       // Automatically determine IN or OUT
       if (!todayLog || (todayLog && todayLog.outTime)) {
         // Record IN time
@@ -151,17 +164,22 @@ export default function SupervisorBarcodeScanner() {
           employeeId: employee.id,
           inTime: timeData.realTime,
           displayInTime: timeData.displayTime,
-          departmentId: selectedCategory,
+          departmentId: selectedCategory, // Use selected category for work assignment
           supervisorId: currentSupervisor?.id,
           workingCategory: selectedCategory,
         })
 
-        const categoryName = dataStore.getDepartmentById(selectedCategory)?.name || selectedCategory
-        setMessage(
-          `✅ ${employee.name} CHECKED IN\nCategory: ${categoryName}\nReal: ${timeData.realTimeFormatted} | Display: ${timeData.displayTimeFormatted}`,
-        )
-        setMessageType("success")
-        playSuccessSound()
+        if (isDifferentDepartment) {
+          setMessage(
+            `⚠️ ${employee.name} CHECKED IN\n📝 Note: ${employeeDept} employee working in ${workingDept}\nTime: ${timeData.displayTimeFormatted}`,
+          )
+          setMessageType("warning")
+          playWarningSound()
+        } else {
+          setMessage(`✅ ${employee.name} CHECKED IN\nCategory: ${workingDept}\nTime: ${timeData.displayTimeFormatted}`)
+          setMessageType("success")
+          playSuccessSound()
+        }
       } else if (todayLog && !todayLog.outTime) {
         // Record OUT time
         const updatedLog = dataStore.updateAttendanceLog(todayLog.id, {
@@ -171,23 +189,32 @@ export default function SupervisorBarcodeScanner() {
         })
 
         const hours = updatedLog?.totalHours || 0
-        const categoryName = dataStore.getDepartmentById(todayLog.departmentId)?.name || todayLog.departmentId
-        setMessage(
-          `✅ ${employee.name} CHECKED OUT\nCategory: ${categoryName}\nReal: ${timeData.realTimeFormatted} | Display: ${timeData.displayTimeFormatted}\nTotal: ${hours.toFixed(1)}h`,
-        )
-        setMessageType("success")
-        playSuccessSound()
+        const workingCategoryName = dataStore.getDepartmentById(todayLog.departmentId)?.name || todayLog.departmentId
+
+        if (isDifferentDepartment) {
+          setMessage(
+            `⚠️ ${employee.name} CHECKED OUT\n📝 Note: ${employeeDept} employee was working in ${workingCategoryName}\nTime: ${timeData.displayTimeFormatted}\nTotal: ${hours.toFixed(1)}h`,
+          )
+          setMessageType("warning")
+          playWarningSound()
+        } else {
+          setMessage(
+            `✅ ${employee.name} CHECKED OUT\nCategory: ${workingCategoryName}\nTime: ${timeData.displayTimeFormatted}\nTotal: ${hours.toFixed(1)}h`,
+          )
+          setMessageType("success")
+          playSuccessSound()
+        }
       }
 
       // Reload recent logs
       loadRecentLogs()
 
-      // Clear the scanned employee after 3 seconds
+      // Clear the scanned employee after 4 seconds (increased for warning messages)
       setTimeout(() => {
         setLastScannedEmployee(null)
         setMessage("Ready to scan next employee barcode...")
         setMessageType("info")
-      }, 3000)
+      }, 4000)
     } catch (error) {
       setMessage("❌ Error processing attendance. Please try again.")
       setMessageType("error")
@@ -225,34 +252,38 @@ export default function SupervisorBarcodeScanner() {
         )}
       </div>
 
-      {/* Category Selection - Restricted for Supervisor */}
+      {/* Category Selection */}
       <Card className="border-2 border-blue-200">
         <CardHeader className="pb-3 sm:pb-6">
           <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
             <Building2 className="h-4 w-4 sm:h-5 sm:w-5" />
-            Your Assigned Work Category
+            Work Category Assignment
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
           <div className="space-y-2">
-            {currentSupervisor?.departmentId ? (
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5 text-blue-600" />
-                  <div>
-                    <p className="font-semibold text-blue-800">
-                      {dataStore.getDepartmentById(currentSupervisor.departmentId)?.name}
-                    </p>
-                    <p className="text-sm text-blue-600">You can only scan employees assigned to this category</p>
-                  </div>
-                </div>
+            <label className="text-sm font-medium">Select work category for this scan session:</label>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choose work category..." />
+              </SelectTrigger>
+              <SelectContent>
+                {dataStore.getDepartments().map((dept) => (
+                  <SelectItem key={dept.id} value={dept.id}>
+                    {dept.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedCategory && (
+              <div className="p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-xs text-blue-600">
+                  <strong>Current Assignment:</strong> {dataStore.getDepartmentById(selectedCategory)?.name}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  ℹ️ Employees from other departments will be marked with a note
+                </p>
               </div>
-            ) : (
-              <Alert variant="destructive">
-                <AlertDescription>
-                  No department assigned to your supervisor account. Please contact admin.
-                </AlertDescription>
-              </Alert>
             )}
           </div>
         </CardContent>
@@ -277,12 +308,20 @@ export default function SupervisorBarcodeScanner() {
             <div className="space-y-2">
               <h3 className="text-lg sm:text-xl font-semibold">{isProcessing ? "Processing..." : "Ready to Scan"}</h3>
 
-              <Alert variant={messageType === "error" ? "destructive" : "default"} className="text-left">
+              <Alert
+                variant={messageType === "error" ? "destructive" : messageType === "warning" ? "default" : "default"}
+                className={`text-left ${messageType === "warning" ? "border-orange-200 bg-orange-50" : ""}`}
+              >
                 <div className="flex items-start gap-2">
                   {messageType === "success" && <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />}
                   {messageType === "error" && <XCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />}
+                  {messageType === "warning" && (
+                    <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0 text-orange-600" />
+                  )}
                   {messageType === "info" && <Scan className="h-4 w-4 mt-0.5 flex-shrink-0" />}
-                  <AlertDescription className="font-medium whitespace-pre-line text-sm sm:text-base">
+                  <AlertDescription
+                    className={`font-medium whitespace-pre-line text-sm sm:text-base ${messageType === "warning" ? "text-orange-800" : ""}`}
+                  >
                     {message}
                   </AlertDescription>
                 </div>
@@ -291,18 +330,33 @@ export default function SupervisorBarcodeScanner() {
 
             {/* Show scanned employee info */}
             {lastScannedEmployee && (
-              <Card className="border-2 border-green-200 bg-green-50">
+              <Card
+                className={`border-2 ${messageType === "warning" ? "border-orange-200 bg-orange-50" : "border-green-200 bg-green-50"}`}
+              >
                 <CardContent className="pt-4">
                   <div className="flex items-center justify-center gap-4">
-                    <div className="p-2 bg-green-100 rounded-full">
-                      <User className="h-6 w-6 text-green-600" />
+                    <div className={`p-2 rounded-full ${messageType === "warning" ? "bg-orange-100" : "bg-green-100"}`}>
+                      <User className={`h-6 w-6 ${messageType === "warning" ? "text-orange-600" : "text-green-600"}`} />
                     </div>
                     <div className="text-center">
-                      <h4 className="font-bold text-lg text-green-800">{lastScannedEmployee.name}</h4>
-                      <p className="text-green-600">{lastScannedEmployee.empCode}</p>
-                      <Badge variant={getCurrentStatus(lastScannedEmployee.id).variant} className="mt-1">
-                        {getCurrentStatus(lastScannedEmployee.id).status}
-                      </Badge>
+                      <h4
+                        className={`font-bold text-lg ${messageType === "warning" ? "text-orange-800" : "text-green-800"}`}
+                      >
+                        {lastScannedEmployee.name}
+                      </h4>
+                      <p className={`${messageType === "warning" ? "text-orange-600" : "text-green-600"}`}>
+                        {lastScannedEmployee.empCode}
+                      </p>
+                      <div className="flex items-center justify-center gap-2 mt-1">
+                        <Badge variant={getCurrentStatus(lastScannedEmployee.id).variant}>
+                          {getCurrentStatus(lastScannedEmployee.id).status}
+                        </Badge>
+                        {lastScannedEmployee.departmentId !== selectedCategory && (
+                          <Badge variant="outline" className="text-xs border-orange-300 text-orange-700">
+                            Cross-Dept
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -382,6 +436,12 @@ export default function SupervisorBarcodeScanner() {
                       {log.supervisor && (
                         <p className="text-xs text-muted-foreground">Supervisor: {log.supervisor.name}</p>
                       )}
+                      {log.employee?.departmentId !== log.departmentId && (
+                        <p className="text-xs text-orange-600">
+                          📝 Cross-department: {dataStore.getDepartmentById(log.employee?.departmentId)?.name} →{" "}
+                          {log.department?.name}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="text-left sm:text-right">
@@ -396,9 +456,6 @@ export default function SupervisorBarcodeScanner() {
                                 log.status === "IN" ? log.displayInTime : log.displayOutTime,
                               ).toLocaleTimeString()
                             : new Date(log.status === "IN" ? log.inTime : log.outTime).toLocaleTimeString()}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          Real: {new Date(log.status === "IN" ? log.inTime : log.outTime).toLocaleTimeString()}
                         </div>
                       </div>
                     </div>

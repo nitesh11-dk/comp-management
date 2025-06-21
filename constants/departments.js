@@ -1,8 +1,32 @@
 export const departments = [
-  { id: "dep01", name: "Packing", description: "Product packing and packaging operations" },
-  { id: "dep02", name: "Loading", description: "Loading and unloading of goods" },
-  { id: "dep03", name: "Maintenance", description: "Equipment and facility maintenance" },
-  { id: "dep04", name: "Quality Control", description: "Quality assurance and testing" },
-  { id: "dep05", name: "Warehouse", description: "Storage and inventory management" },
-  { id: "dep06", name: "Security", description: "Security and safety operations" },
+  {
+    id: "packing",
+    name: "Packing Department",
+    description: "Product packing and packaging operations",
+    color: "#3B82F6", // Blue
+  },
+  {
+    id: "production",
+    name: "Production Department",
+    description: "Manufacturing and production operations",
+    color: "#10B981", // Green
+  },
+  {
+    id: "maintenance",
+    name: "Maintenance Department",
+    description: "Equipment maintenance and repairs",
+    color: "#F59E0B", // Yellow
+  },
+  {
+    id: "quality",
+    name: "Quality Control",
+    description: "Quality assurance and testing",
+    color: "#EF4444", // Red
+  },
+  {
+    id: "loading",
+    name: "Loading Department",
+    description: "Loading and dispatch operations",
+    color: "#8B5CF6", // Purple
+  },
 ]
