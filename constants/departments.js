@@ -1,7 +1,8 @@
 export const departments = [
-  { id: "dep01", name: "Packing", description: "Product packaging and quality control" },
-  { id: "dep02", name: "Loading", description: "Warehouse loading and unloading operations" },
-  { id: "dep03", name: "Maintenance", description: "Equipment maintenance and repairs" },
-  { id: "dep04", name: "Quality Control", description: "Product quality assurance" },
-  { id: "dep05", name: "Administration", description: "Administrative and office work" },
+  { id: "dep01", name: "Packing", description: "Product packing and packaging operations" },
+  { id: "dep02", name: "Loading", description: "Loading and unloading of goods" },
+  { id: "dep03", name: "Maintenance", description: "Equipment and facility maintenance" },
+  { id: "dep04", name: "Quality Control", description: "Quality assurance and testing" },
+  { id: "dep05", name: "Warehouse", description: "Storage and inventory management" },
+  { id: "dep06", name: "Security", description: "Security and safety operations" },
 ]

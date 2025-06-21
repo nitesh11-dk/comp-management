@@ -32,7 +32,10 @@ export default function LoginForm() {
 
   const demoCredentials = [
     { role: "Admin", username: "admin", password: "admin123", icon: Users },
-    { role: "Supervisor", username: "supervisor", password: "super123", icon: UserCheck },
+    { role: "Supervisor 1 (Packing)", username: "supervisor1", password: "super123", icon: UserCheck },
+    { role: "Supervisor 2 (Loading)", username: "supervisor2", password: "super456", icon: UserCheck },
+    { role: "Supervisor 3 (Maintenance)", username: "supervisor3", password: "super789", icon: UserCheck },
+    { role: "Supervisor 4 (Quality)", username: "supervisor4", password: "super321", icon: UserCheck },
     { role: "Employee", username: "emp001", password: "emp123", icon: Building2 },
   ]
 

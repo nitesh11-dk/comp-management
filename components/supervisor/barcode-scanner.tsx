@@ -5,9 +5,10 @@ import { dataStore } from "../../lib/data-store"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { roundTimeToNextHour } from "../../lib/time-utils"
 import BarcodeScanner from "../barcode-scanner"
-import { Scan, Clock, User, CheckCircle, XCircle, Zap } from "lucide-react"
+import { Scan, Clock, User, CheckCircle, XCircle, Zap, Building2 } from "lucide-react"
 
 export default function SupervisorBarcodeScanner() {
   const [lastScannedEmployee, setLastScannedEmployee] = useState<any>(null)
@@ -16,10 +17,24 @@ export default function SupervisorBarcodeScanner() {
   const [recentLogs, setRecentLogs] = useState<any[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
   const [isScannerActive, setIsScannerActive] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState<string>("")
+  const [currentSupervisor, setCurrentSupervisor] = useState<any>(null)
 
   useEffect(() => {
     loadRecentLogs()
+    loadCurrentSupervisor()
   }, [])
+
+  const loadCurrentSupervisor = () => {
+    const user = dataStore.getCurrentUser()
+    if (user && user.role === "supervisor") {
+      setCurrentSupervisor(user)
+      // Set default category based on supervisor's assigned department
+      if (user.departmentId) {
+        setSelectedCategory(user.departmentId)
+      }
+    }
+  }
 
   const loadRecentLogs = () => {
     const logs = dataStore.getAttendanceLogs().slice(0, 10)
@@ -27,6 +42,7 @@ export default function SupervisorBarcodeScanner() {
       ...log,
       employee: dataStore.getEmployeeById(log.employeeId),
       department: dataStore.getDepartmentById(log.departmentId),
+      supervisor: dataStore.getUserById(log.supervisorId),
     }))
     setRecentLogs(logsWithEmployeeData)
   }
@@ -78,6 +94,13 @@ export default function SupervisorBarcodeScanner() {
   const processBarcodeScan = async (scannedCode: string) => {
     if (!scannedCode.trim() || isProcessing) return
 
+    if (!selectedCategory) {
+      setMessage("❌ Please select a work category first")
+      setMessageType("error")
+      playErrorSound()
+      return
+    }
+
     setIsProcessing(true)
 
     try {
@@ -114,11 +137,14 @@ export default function SupervisorBarcodeScanner() {
           employeeId: employee.id,
           inTime: timeData.realTime,
           displayInTime: timeData.displayTime,
-          departmentId: employee.departmentId,
+          departmentId: selectedCategory, // Use selected category instead of employee default
+          supervisorId: currentSupervisor?.id,
+          workingCategory: selectedCategory,
         })
 
+        const categoryName = dataStore.getDepartmentById(selectedCategory)?.name || selectedCategory
         setMessage(
-          `✅ ${employee.name} CHECKED IN\nReal: ${timeData.realTimeFormatted} | Display: ${timeData.displayTimeFormatted}`,
+          `✅ ${employee.name} CHECKED IN\nCategory: ${categoryName}\nReal: ${timeData.realTimeFormatted} | Display: ${timeData.displayTimeFormatted}`,
         )
         setMessageType("success")
         playSuccessSound()
@@ -127,11 +153,13 @@ export default function SupervisorBarcodeScanner() {
         const updatedLog = dataStore.updateAttendanceLog(todayLog.id, {
           outTime: timeData.realTime,
           displayOutTime: timeData.displayTime,
+          outSupervisorId: currentSupervisor?.id,
         })
 
         const hours = updatedLog?.totalHours || 0
+        const categoryName = dataStore.getDepartmentById(todayLog.departmentId)?.name || todayLog.departmentId
         setMessage(
-          `✅ ${employee.name} CHECKED OUT\nReal: ${timeData.realTimeFormatted} | Display: ${timeData.displayTimeFormatted}\nTotal: ${hours.toFixed(1)}h`,
+          `✅ ${employee.name} CHECKED OUT\nCategory: ${categoryName}\nReal: ${timeData.realTimeFormatted} | Display: ${timeData.displayTimeFormatted}\nTotal: ${hours.toFixed(1)}h`,
         )
         setMessageType("success")
         playSuccessSound()
@@ -172,9 +200,47 @@ export default function SupervisorBarcodeScanner() {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h2 className="text-3xl font-bold mb-2">Automated Barcode Scanner</h2>
+        <h2 className="text-3xl font-bold mb-2">Supervisor Attendance Scanner</h2>
         <p className="text-muted-foreground">Scan employee barcode to automatically record attendance</p>
+        {currentSupervisor && (
+          <p className="text-sm text-muted-foreground mt-1">
+            Logged in as: <span className="font-medium">{currentSupervisor.name}</span>
+          </p>
+        )}
       </div>
+
+      {/* Category Selection */}
+      <Card className="border-2 border-blue-200">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="h-5 w-5" />
+            Work Category Assignment
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Select work category for this scan session:</label>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choose work category..." />
+              </SelectTrigger>
+              <SelectContent>
+                {dataStore.getDepartments().map((dept) => (
+                  <SelectItem key={dept.id} value={dept.id}>
+                    {dept.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedCategory && (
+              <p className="text-xs text-muted-foreground">
+                All scanned employees will be assigned to:{" "}
+                <span className="font-medium">{dataStore.getDepartmentById(selectedCategory)?.name}</span>
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Scanner Status */}
       <Card className="border-2 border-dashed border-primary">
@@ -228,7 +294,7 @@ export default function SupervisorBarcodeScanner() {
         </CardContent>
       </Card>
 
-      {/* Camera Scanner */}
+      {/* Enhanced Camera Scanner */}
       <BarcodeScanner onScan={processBarcodeScan} isActive={isScannerActive} onToggle={handleScannerToggle} />
 
       {/* Quick Test Buttons (for demo) */}
@@ -241,21 +307,21 @@ export default function SupervisorBarcodeScanner() {
             <button
               onClick={() => processBarcodeScan("RVK123")}
               className="px-4 py-2 bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200 transition-colors"
-              disabled={isProcessing}
+              disabled={isProcessing || !selectedCategory}
             >
               Test: RVK123
             </button>
             <button
               onClick={() => processBarcodeScan("PRS456")}
               className="px-4 py-2 bg-purple-100 text-purple-800 rounded-lg hover:bg-purple-200 transition-colors"
-              disabled={isProcessing}
+              disabled={isProcessing || !selectedCategory}
             >
               Test: PRS456
             </button>
             <button
               onClick={() => processBarcodeScan("AMS789")}
               className="px-4 py-2 bg-green-100 text-green-800 rounded-lg hover:bg-green-200 transition-colors"
-              disabled={isProcessing}
+              disabled={isProcessing || !selectedCategory}
             >
               Test: AMS789
             </button>
@@ -293,6 +359,9 @@ export default function SupervisorBarcodeScanner() {
                       <p className="text-sm text-muted-foreground">
                         {log.employee?.empCode} • {log.department?.name}
                       </p>
+                      {log.supervisor && (
+                        <p className="text-xs text-muted-foreground">Supervisor: {log.supervisor.name}</p>
+                      )}
                     </div>
                   </div>
                   <div className="text-right">

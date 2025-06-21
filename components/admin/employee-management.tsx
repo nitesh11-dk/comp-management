@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { dataStore } from "../../lib/data-store"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Edit, Trash2, Search, Download } from "lucide-react"
+import { Plus, Edit, Trash2, Search, Download, Eye } from "lucide-react"
 import Barcode from "react-barcode"
 import html2canvas from "html2canvas"
 
@@ -32,6 +33,7 @@ interface Employee {
 }
 
 export default function EmployeeManagement() {
+  const router = useRouter()
   const [employees, setEmployees] = useState<Employee[]>([])
   const [departments, setDepartments] = useState<any[]>([])
   const [shifts, setShifts] = useState<any>({})
@@ -89,6 +91,10 @@ export default function EmployeeManagement() {
     }
   }
 
+  const handleViewDetails = (employeeId: string) => {
+    router.push(`/admin/employee/${employeeId}`)
+  }
+
   const getDepartmentName = (id: string) => {
     return departments.find((dept) => dept.id === id)?.name || "Unknown"
   }
@@ -98,7 +104,6 @@ export default function EmployeeManagement() {
   }
 
   const downloadEmployeeBarcode = async (empCode: string) => {
-    // Create a temporary div with barcode
     const tempDiv = document.createElement("div")
     tempDiv.style.position = "absolute"
     tempDiv.style.left = "-9999px"
@@ -107,7 +112,6 @@ export default function EmployeeManagement() {
     </div>`
     document.body.appendChild(tempDiv)
 
-    // Generate barcode using JsBarcode
     const JsBarcode = require("jsbarcode")
     JsBarcode("#temp-barcode", empCode, {
       width: 2,
@@ -329,6 +333,9 @@ export default function EmployeeManagement() {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => handleViewDetails(employee.id)}>
+                        <Eye className="h-4 w-4" />
+                      </Button>
                       <Button size="sm" variant="outline" onClick={() => handleEdit(employee)}>
                         <Edit className="h-4 w-4" />
                       </Button>
