@@ -6,7 +6,8 @@ import EmployeeManagement from "../components/admin/employee-management"
 import BarcodeScanner from "../components/supervisor/barcode-scanner"
 import EmployeeDashboard from "../components/employee/employee-dashboard"
 import { Button } from "@/components/ui/button"
-import { LogOut, Users, Scan, User } from "lucide-react"
+import { LogOut, Users, Scan, User, Plus } from "lucide-react"
+import Link from "next/link"
 
 export default function Home() {
   const { user, logout, isLoading } = useAuth()
@@ -66,10 +67,20 @@ export default function Home() {
               </p>
             </div>
           </div>
-          <Button variant="outline" onClick={logout}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Logout
-          </Button>
+          <div className="flex items-center gap-3">
+            {(user.role === "admin" || user.role === "supervisor") && (
+              <Link href="/add-employee">
+                <Button variant="outline" size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Employee
+                </Button>
+              </Link>
+            )}
+            <Button variant="outline" onClick={logout}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
+          </div>
         </div>
       </header>
 

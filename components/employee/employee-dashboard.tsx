@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useAuth } from "../../contexts/auth-context"
 import { dataStore } from "../../lib/data-store"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,7 +12,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { User, Clock, Calendar, Building, Edit } from "lucide-react"
+import { User, Clock, Calendar, Building, Edit, Download } from "lucide-react"
+import html2canvas from "html2canvas"
+
+// Add this import at the top
+import Barcode from "react-barcode"
 
 export default function EmployeeDashboard() {
   const { user } = useAuth()
@@ -22,6 +26,25 @@ export default function EmployeeDashboard() {
   const [shift, setShift] = useState<any>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [formData, setFormData] = useState<any>({})
+  const barcodeRef = useRef<HTMLDivElement>(null)
+
+  const downloadMyBarcode = async (empCode: string) => {
+    if (!barcodeRef.current) return
+
+    try {
+      const canvas = await html2canvas(barcodeRef.current, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+      })
+
+      const link = document.createElement("a")
+      link.download = `employee_${empCode}_barcode.png`
+      link.href = canvas.toDataURL("image/png")
+      link.click()
+    } catch (error) {
+      console.error("Error downloading barcode:", error)
+    }
+  }
 
   useEffect(() => {
     if (user?.employeeId) {
@@ -193,6 +216,23 @@ export default function EmployeeDashboard() {
                 <p className="text-sm text-muted-foreground">Hourly Rate</p>
                 <p className="font-medium">₹{employee.hourlyRate}</p>
               </div>
+            </div>
+          </div>
+
+          {/* Add this section after the profile information grid: */}
+          <div className="mt-6 pt-6 border-t">
+            <h4 className="font-medium mb-3">My Barcode</h4>
+            <div className="space-y-3">
+              <div className="bg-white p-4 rounded-lg border inline-block" ref={barcodeRef}>
+                <Barcode value={employee.empCode} width={2} height={50} fontSize={12} />
+              </div>
+              <div>
+                <Button onClick={() => downloadMyBarcode(employee.empCode)} variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  Download My Barcode
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">Use this barcode for attendance scanning</p>
             </div>
           </div>
 

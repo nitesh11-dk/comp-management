@@ -12,7 +12,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Edit, Trash2, Search } from "lucide-react"
+import { Plus, Edit, Trash2, Search, Download } from "lucide-react"
+import Barcode from "react-barcode"
+import html2canvas from "html2canvas"
 
 interface Employee {
   id: string
@@ -93,6 +95,43 @@ export default function EmployeeManagement() {
 
   const getShiftName = (id: string) => {
     return shifts[id]?.name || "Unknown"
+  }
+
+  const downloadEmployeeBarcode = async (empCode: string) => {
+    // Create a temporary div with barcode
+    const tempDiv = document.createElement("div")
+    tempDiv.style.position = "absolute"
+    tempDiv.style.left = "-9999px"
+    tempDiv.innerHTML = `<div style="background: white; padding: 20px;">
+      <svg id="temp-barcode"></svg>
+    </div>`
+    document.body.appendChild(tempDiv)
+
+    // Generate barcode using JsBarcode
+    const JsBarcode = require("jsbarcode")
+    JsBarcode("#temp-barcode", empCode, {
+      width: 2,
+      height: 60,
+      fontSize: 14,
+      background: "#ffffff",
+      lineColor: "#000000",
+    })
+
+    try {
+      const canvas = await html2canvas(tempDiv.firstChild as HTMLElement, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+      })
+
+      const link = document.createElement("a")
+      link.download = `employee_${empCode}_barcode.png`
+      link.href = canvas.toDataURL("image/png")
+      link.click()
+    } catch (error) {
+      console.error("Error downloading barcode:", error)
+    } finally {
+      document.body.removeChild(tempDiv)
+    }
   }
 
   return (
@@ -253,6 +292,7 @@ export default function EmployeeManagement() {
                 <TableHead>Shift</TableHead>
                 <TableHead>Mobile</TableHead>
                 <TableHead>Rate/Hr</TableHead>
+                <TableHead>Barcode</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -266,6 +306,22 @@ export default function EmployeeManagement() {
                   <TableCell>{getShiftName(employee.shiftType)}</TableCell>
                   <TableCell>{employee.mobile}</TableCell>
                   <TableCell>₹{employee.hourlyRate}</TableCell>
+                  <TableCell>
+                    <div className="space-y-2">
+                      <div className="w-24">
+                        <Barcode value={employee.empCode} width={1} height={30} fontSize={10} />
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => downloadEmployeeBarcode(employee.empCode)}
+                        className="w-full text-xs"
+                      >
+                        <Download className="h-3 w-3 mr-1" />
+                        Download
+                      </Button>
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <Badge variant={employee.profileComplete ? "default" : "secondary"}>
                       {employee.profileComplete ? "Complete" : "Incomplete"}
