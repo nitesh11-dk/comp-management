@@ -57,35 +57,37 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+        <div className="container mx-auto px-2 sm:px-4 py-3 sm:py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-3 sm:space-y-0">
           <div className="flex items-center gap-3">
             {getRoleIcon()}
             <div>
-              <h1 className="text-xl font-bold">Manpower Management System</h1>
-              <p className="text-sm text-muted-foreground">
+              <h1 className="text-lg sm:text-xl font-bold">Manpower Management System</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 {user.name} • {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
             {(user.role === "admin" || user.role === "supervisor") && (
-              <Link href="/add-employee">
-                <Button variant="outline" size="sm">
+              <Link href="/add-employee" className="flex-1 sm:flex-none">
+                <Button variant="outline" size="sm" className="w-full sm:w-auto">
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Employee
+                  <span className="hidden sm:inline">Add Employee</span>
+                  <span className="sm:hidden">Add</span>
                 </Button>
               </Link>
             )}
-            <Button variant="outline" onClick={logout}>
+            <Button variant="outline" onClick={logout} size="sm" className="flex-1 sm:flex-none">
               <LogOut className="h-4 w-4 mr-2" />
-              Logout
+              <span className="hidden sm:inline">Logout</span>
+              <span className="sm:hidden">Exit</span>
             </Button>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">{getRoleComponent()}</main>
+      <main className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">{getRoleComponent()}</main>
     </div>
   )
 }

@@ -121,12 +121,14 @@ export default function EmployeeDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold">My Dashboard</h2>
-          <p className="text-muted-foreground">Welcome back, {employee.name}</p>
+          <h2 className="text-xl sm:text-2xl font-bold">My Dashboard</h2>
+          <p className="text-sm sm:text-base text-muted-foreground">Welcome back, {employee.name}</p>
         </div>
-        <Badge variant={currentStatus.variant}>{currentStatus.status}</Badge>
+        <Badge variant={currentStatus.variant} className="self-start sm:self-auto">
+          {currentStatus.status}
+        </Badge>
       </div>
 
       {/* Profile Card */}
@@ -188,46 +190,51 @@ export default function EmployeeDashboard() {
           )}
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-3">
               <div>
-                <p className="text-sm text-muted-foreground">Employee Code</p>
-                <p className="font-medium">{employee.empCode}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Employee Code</p>
+                <p className="font-medium text-sm sm:text-base">{employee.empCode}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">PF ID</p>
-                <p className="font-medium">{employee.pfId}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">PF ID</p>
+                <p className="font-medium text-sm sm:text-base">{employee.pfId}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">ESIC ID</p>
-                <p className="font-medium">{employee.esicId}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">ESIC ID</p>
+                <p className="font-medium text-sm sm:text-base">{employee.esicId}</p>
               </div>
             </div>
             <div className="space-y-3">
               <div>
-                <p className="text-sm text-muted-foreground">Department</p>
-                <p className="font-medium">{department?.name}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Department</p>
+                <p className="font-medium text-sm sm:text-base">{department?.name}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Shift Type</p>
-                <p className="font-medium">{shift?.name}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Shift Type</p>
+                <p className="font-medium text-sm sm:text-base">{shift?.name}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Hourly Rate</p>
-                <p className="font-medium">₹{employee.hourlyRate}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Hourly Rate</p>
+                <p className="font-medium text-sm sm:text-base">₹{employee.hourlyRate}</p>
               </div>
             </div>
           </div>
 
           {/* Add this section after the profile information grid: */}
           <div className="mt-6 pt-6 border-t">
-            <h4 className="font-medium mb-3">My Barcode</h4>
+            <h4 className="font-medium mb-3 text-sm sm:text-base">My Barcode</h4>
             <div className="space-y-3">
-              <div className="bg-white p-4 rounded-lg border inline-block" ref={barcodeRef}>
+              <div className="bg-white p-3 sm:p-4 rounded-lg border inline-block" ref={barcodeRef}>
                 <Barcode value={employee.empCode} width={2} height={50} fontSize={12} />
               </div>
               <div>
-                <Button onClick={() => downloadMyBarcode(employee.empCode)} variant="outline" size="sm">
+                <Button
+                  onClick={() => downloadMyBarcode(employee.empCode)}
+                  variant="outline"
+                  size="sm"
+                  className="w-full sm:w-auto"
+                >
                   <Download className="h-4 w-4 mr-2" />
                   Download My Barcode
                 </Button>
@@ -245,38 +252,38 @@ export default function EmployeeDashboard() {
       </Card>
 
       {/* Monthly Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 sm:pt-6">
             <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-primary" />
+              <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               <div>
-                <p className="text-sm text-muted-foreground">Total Hours</p>
-                <p className="text-2xl font-bold">{monthlyStats.totalHours.toFixed(1)}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Total Hours</p>
+                <p className="text-xl sm:text-2xl font-bold">{monthlyStats.totalHours.toFixed(1)}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 sm:pt-6">
             <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-primary" />
+              <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               <div>
-                <p className="text-sm text-muted-foreground">Working Days</p>
-                <p className="text-2xl font-bold">{monthlyStats.workingDays}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Working Days</p>
+                <p className="text-xl sm:text-2xl font-bold">{monthlyStats.workingDays}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 sm:pt-6">
             <div className="flex items-center gap-2">
-              <Building className="h-5 w-5 text-primary" />
+              <Building className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               <div>
-                <p className="text-sm text-muted-foreground">Monthly Salary</p>
-                <p className="text-2xl font-bold">₹{monthlyStats.totalSalary.toFixed(0)}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Monthly Salary</p>
+                <p className="text-xl sm:text-2xl font-bold">₹{monthlyStats.totalSalary.toFixed(0)}</p>
               </div>
             </div>
           </CardContent>
@@ -288,35 +295,43 @@ export default function EmployeeDashboard() {
         <CardHeader>
           <CardTitle>My Attendance History</CardTitle>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Department</TableHead>
-                <TableHead>In Time</TableHead>
-                <TableHead>Out Time</TableHead>
-                <TableHead>Total Hours</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {attendanceLogs.slice(0, 10).map((log) => (
-                <TableRow key={log.id}>
-                  <TableCell>{new Date(log.date).toLocaleDateString()}</TableCell>
-                  <TableCell>{log.departmentName}</TableCell>
-                  <TableCell>{log.inTime ? new Date(log.inTime).toLocaleTimeString() : "-"}</TableCell>
-                  <TableCell>{log.outTime ? new Date(log.outTime).toLocaleTimeString() : "-"}</TableCell>
-                  <TableCell>{log.totalHours ? `${log.totalHours}h` : "-"}</TableCell>
-                  <TableCell>
-                    <Badge variant={log.status === "IN" ? "default" : "secondary"}>
-                      {log.outTime ? "Complete" : log.status}
-                    </Badge>
-                  </TableCell>
+        <CardContent className="p-0 sm:p-6">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-[80px]">Date</TableHead>
+                  <TableHead className="min-w-[100px] hidden sm:table-cell">Department</TableHead>
+                  <TableHead className="min-w-[80px]">In Time</TableHead>
+                  <TableHead className="min-w-[80px]">Out Time</TableHead>
+                  <TableHead className="min-w-[80px] hidden md:table-cell">Total Hours</TableHead>
+                  <TableHead className="min-w-[80px]">Status</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {attendanceLogs.slice(0, 10).map((log) => (
+                  <TableRow key={log.id}>
+                    <TableCell className="text-xs sm:text-sm">{new Date(log.date).toLocaleDateString()}</TableCell>
+                    <TableCell className="hidden sm:table-cell text-xs sm:text-sm">{log.departmentName}</TableCell>
+                    <TableCell className="text-xs sm:text-sm">
+                      {log.inTime ? new Date(log.inTime).toLocaleTimeString() : "-"}
+                    </TableCell>
+                    <TableCell className="text-xs sm:text-sm">
+                      {log.outTime ? new Date(log.outTime).toLocaleTimeString() : "-"}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-xs sm:text-sm">
+                      {log.totalHours ? `${log.totalHours}h` : "-"}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={log.status === "IN" ? "default" : "secondary"} className="text-xs">
+                        {log.outTime ? "Complete" : log.status}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -140,8 +140,8 @@ export default function EmployeeManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Employee Management</h2>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h2 className="text-xl sm:text-2xl font-bold">Employee Management</h2>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button
@@ -149,17 +149,18 @@ export default function EmployeeManagement() {
                 setEditingEmployee(null)
                 setFormData({})
               }}
+              className="w-full sm:w-auto"
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Employee
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingEmployee ? "Edit Employee" : "Add New Employee"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Full Name</Label>
                   <Input
@@ -286,68 +287,87 @@ export default function EmployeeManagement() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Employee Code</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Department</TableHead>
-                <TableHead>Shift</TableHead>
-                <TableHead>Mobile</TableHead>
-                <TableHead>Rate/Hr</TableHead>
-                <TableHead>Barcode</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredEmployees.map((employee) => (
-                <TableRow key={employee.id}>
-                  <TableCell className="font-medium">{employee.empCode}</TableCell>
-                  <TableCell>{employee.name}</TableCell>
-                  <TableCell>{getDepartmentName(employee.departmentId)}</TableCell>
-                  <TableCell>{getShiftName(employee.shiftType)}</TableCell>
-                  <TableCell>{employee.mobile}</TableCell>
-                  <TableCell>₹{employee.hourlyRate}</TableCell>
-                  <TableCell>
-                    <div className="space-y-2">
-                      <div className="w-24">
-                        <Barcode value={employee.empCode} width={1} height={30} fontSize={10} />
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => downloadEmployeeBarcode(employee.empCode)}
-                        className="w-full text-xs"
-                      >
-                        <Download className="h-3 w-3 mr-1" />
-                        Download
-                      </Button>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={employee.profileComplete ? "default" : "secondary"}>
-                      {employee.profileComplete ? "Complete" : "Incomplete"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={() => handleViewDetails(employee.id)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => handleEdit(employee)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => handleDelete(employee.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+        <CardContent className="p-0 sm:p-6">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-[100px]">Employee Code</TableHead>
+                  <TableHead className="min-w-[120px]">Name</TableHead>
+                  <TableHead className="min-w-[100px] hidden sm:table-cell">Department</TableHead>
+                  <TableHead className="min-w-[80px] hidden md:table-cell">Shift</TableHead>
+                  <TableHead className="min-w-[100px] hidden lg:table-cell">Mobile</TableHead>
+                  <TableHead className="min-w-[80px] hidden lg:table-cell">Rate/Hr</TableHead>
+                  <TableHead className="min-w-[120px] hidden xl:table-cell">Barcode</TableHead>
+                  <TableHead className="min-w-[80px]">Status</TableHead>
+                  <TableHead className="min-w-[120px]">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredEmployees.map((employee) => (
+                  <TableRow key={employee.id}>
+                    <TableCell className="font-medium">{employee.empCode}</TableCell>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{employee.name}</div>
+                        <div className="text-xs text-muted-foreground sm:hidden">
+                          {getDepartmentName(employee.departmentId)} • ₹{employee.hourlyRate}/hr
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">{getDepartmentName(employee.departmentId)}</TableCell>
+                    <TableCell className="hidden md:table-cell">{getShiftName(employee.shiftType)}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{employee.mobile}</TableCell>
+                    <TableCell className="hidden lg:table-cell">₹{employee.hourlyRate}</TableCell>
+                    <TableCell className="hidden xl:table-cell">
+                      <div className="space-y-2">
+                        <div className="w-24">
+                          <Barcode value={employee.empCode} width={1} height={30} fontSize={10} />
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => downloadEmployeeBarcode(employee.empCode)}
+                          className="w-full text-xs"
+                        >
+                          <Download className="h-3 w-3 mr-1" />
+                          Download
+                        </Button>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={employee.profileComplete ? "default" : "secondary"} className="text-xs">
+                        {employee.profileComplete ? "Complete" : "Incomplete"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="outline" onClick={() => handleViewDetails(employee.id)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEdit(employee)}
+                          className="hidden sm:inline-flex"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDelete(employee.id)}
+                          className="hidden sm:inline-flex"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

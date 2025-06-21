@@ -136,15 +136,20 @@ export default function BarcodeScanner({ onScan, isActive, onToggle }: BarcodeSc
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
+        <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <span className="flex items-center gap-2">
-            <Camera className="h-5 w-5" />
+            <Camera className="h-4 w-4 sm:h-5 sm:w-5" />
             Barcode Scanner
             {cameraPermission === "denied" && <AlertTriangle className="h-4 w-4 text-yellow-500" />}
           </span>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             {!fallbackMode && (
-              <Button onClick={onToggle} variant={isActive ? "destructive" : "default"} size="sm">
+              <Button
+                onClick={onToggle}
+                variant={isActive ? "destructive" : "default"}
+                size="sm"
+                className="w-full sm:w-auto"
+              >
                 {isActive ? (
                   <>
                     <CameraOff className="h-4 w-4 mr-2" />
@@ -158,7 +163,12 @@ export default function BarcodeScanner({ onScan, isActive, onToggle }: BarcodeSc
                 )}
               </Button>
             )}
-            <Button onClick={() => setFallbackMode(!fallbackMode)} variant="outline" size="sm">
+            <Button
+              onClick={() => setFallbackMode(!fallbackMode)}
+              variant="outline"
+              size="sm"
+              className="w-full sm:w-auto"
+            >
               {fallbackMode ? "Use Camera" : "Use Manual"}
             </Button>
           </div>
@@ -182,35 +192,45 @@ export default function BarcodeScanner({ onScan, isActive, onToggle }: BarcodeSc
         )}
 
         {fallbackMode ? (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="manual-input">Manual Barcode Entry</Label>
-              <div className="flex gap-2">
+              <Label htmlFor="manual-input" className="text-sm sm:text-base">
+                Manual Barcode Entry
+              </Label>
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Input
                   id="manual-input"
                   placeholder="Enter employee code or barcode"
                   value={manualInput}
                   onChange={(e) => setManualInput(e.target.value)}
                   onKeyPress={(e) => e.key === "Enter" && handleManualSubmit()}
+                  className="flex-1"
                 />
-                <Button onClick={handleManualSubmit} disabled={!manualInput.trim()}>
+                <Button onClick={handleManualSubmit} disabled={!manualInput.trim()} className="w-full sm:w-auto">
                   Scan
                 </Button>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="file-upload">Upload Barcode Image</Label>
-              <div className="flex gap-2">
+              <Label htmlFor="file-upload" className="text-sm sm:text-base">
+                Upload Barcode Image
+              </Label>
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Input
                   id="file-upload"
                   type="file"
                   accept="image/*"
                   onChange={handleFileUpload}
                   ref={fileInputRef}
-                  className="file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-sm file:bg-primary file:text-primary-foreground"
+                  className="file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-sm file:bg-primary file:text-primary-foreground flex-1"
                 />
-                <Button onClick={() => fileInputRef.current?.click()} variant="outline" size="sm">
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  variant="outline"
+                  size="sm"
+                  className="w-full sm:w-auto"
+                >
                   <Upload className="h-4 w-4 mr-2" />
                   Browse
                 </Button>
@@ -218,16 +238,16 @@ export default function BarcodeScanner({ onScan, isActive, onToggle }: BarcodeSc
             </div>
           </div>
         ) : isActive ? (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <div id="barcode-scanner" className="w-full" />
-            <p className="text-sm text-muted-foreground text-center">
+            <p className="text-xs sm:text-sm text-muted-foreground text-center">
               Point your camera at an employee barcode to scan
             </p>
           </div>
         ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            <Camera className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Click "Start Scanner" to begin scanning barcodes</p>
+          <div className="text-center py-6 sm:py-8 text-muted-foreground">
+            <Camera className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-4 opacity-50" />
+            <p className="text-sm sm:text-base">Click "Start Scanner" to begin scanning barcodes</p>
             <p className="text-xs mt-2">Or use "Manual" mode if camera is not available</p>
           </div>
         )}

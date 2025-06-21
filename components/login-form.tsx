@@ -40,8 +40,8 @@ export default function LoginForm() {
   ]
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md space-y-6">
+    <div className="min-h-screen flex items-center justify-center bg-background p-2 sm:p-4">
+      <div className="w-full max-w-md space-y-4 sm:space-y-6">
         <Card>
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold">Manpower Management</CardTitle>
@@ -86,16 +86,19 @@ export default function LoginForm() {
             <CardTitle className="text-lg">Demo Credentials</CardTitle>
             <CardDescription>Use these credentials to test different roles</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-2 sm:space-y-3">
             {demoCredentials.map((cred) => {
               const Icon = cred.icon
               return (
-                <div key={cred.role} className="flex items-center justify-between p-3 border rounded-lg">
+                <div
+                  key={cred.role}
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 border rounded-lg space-y-2 sm:space-y-0"
+                >
                   <div className="flex items-center gap-2">
                     <Icon className="h-4 w-4" />
-                    <span className="font-medium">{cred.role}</span>
+                    <span className="font-medium text-sm sm:text-base">{cred.role}</span>
                   </div>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-xs sm:text-sm text-muted-foreground font-mono">
                     {cred.username} / {cred.password}
                   </div>
                 </div>

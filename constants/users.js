@@ -1,66 +1,41 @@
 export const users = [
   {
-    id: "user001",
+    id: "admin001",
     username: "admin",
     password: "admin123",
     role: "admin",
     name: "System Administrator",
-    departmentId: null,
   },
   {
-    id: "user002",
-    username: "supervisor1",
-    password: "super123",
+    id: "sup001",
+    username: "packing_sup",
+    password: "pack123",
     role: "supervisor",
-    name: "Rajesh Kumar",
-    departmentId: "dep01", // Packing Department
+    name: "Packing Supervisor",
+    departmentId: "packing", // Only can handle packing employees
   },
   {
-    id: "user003",
-    username: "supervisor2",
-    password: "super456",
+    id: "sup002",
+    username: "production_sup",
+    password: "prod123",
     role: "supervisor",
-    name: "Priya Sharma",
-    departmentId: "dep02", // Loading Department
+    name: "Production Supervisor",
+    departmentId: "production", // Only can handle production employees
   },
   {
-    id: "user004",
-    username: "supervisor3",
-    password: "super789",
+    id: "sup003",
+    username: "quality_sup",
+    password: "qual123",
     role: "supervisor",
-    name: "Amit Singh",
-    departmentId: "dep03", // Maintenance Department
+    name: "Quality Supervisor",
+    departmentId: "quality", // Only can handle quality employees
   },
   {
-    id: "user005",
-    username: "supervisor4",
-    password: "super321",
+    id: "sup004",
+    username: "maintenance_sup",
+    password: "maint123",
     role: "supervisor",
-    name: "Sunita Devi",
-    departmentId: "dep04", // Quality Control Department
-  },
-  {
-    id: "user006",
-    username: "emp001",
-    password: "emp123",
-    role: "employee",
-    name: "Ravi Kumar",
-    employeeId: "emp001",
-  },
-  {
-    id: "user007",
-    username: "emp002",
-    password: "emp456",
-    role: "employee",
-    name: "Priya Rani",
-    employeeId: "emp002",
-  },
-  {
-    id: "user008",
-    username: "emp003",
-    password: "emp789",
-    role: "employee",
-    name: "Amit Sharma",
-    employeeId: "emp003",
+    name: "Maintenance Supervisor",
+    departmentId: "maintenance", // Only can handle maintenance employees
   },
 ]

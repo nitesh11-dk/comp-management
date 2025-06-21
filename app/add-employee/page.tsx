@@ -103,31 +103,31 @@ export default function AddEmployeePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen bg-background p-2 sm:p-4">
+      <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <Button variant="outline" onClick={() => router.push("/")} size="sm">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Dashboard
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">Add New Employee</h1>
-            <p className="text-muted-foreground">Fill in the employee details below</p>
+            <h1 className="text-xl sm:text-2xl font-bold">Add New Employee</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">Fill in the employee details below</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
           {/* Employee Form */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <UserPlus className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <UserPlus className="h-4 w-4 sm:h-5 sm:w-5" />
                 Employee Information
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Full Name *</Label>
                   <Input
@@ -205,11 +205,11 @@ export default function AddEmployeePage() {
                   </Alert>
                 )}
 
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <Button type="submit" className="flex-1" disabled={isSubmitting}>
                     {isSubmitting ? "Adding Employee..." : "Add Employee"}
                   </Button>
-                  <Button type="button" variant="outline" onClick={handleClear}>
+                  <Button type="button" variant="outline" onClick={handleClear} className="flex-1 sm:flex-none">
                     <Trash2 className="h-4 w-4 mr-2" />
                     Clear
                   </Button>
@@ -222,24 +222,24 @@ export default function AddEmployeePage() {
           {generatedEmployee && (
             <Card className="border-2 border-green-200 bg-green-50">
               <CardHeader>
-                <CardTitle className="text-green-800">Employee Added Successfully!</CardTitle>
+                <CardTitle className="text-green-800 text-base sm:text-lg">Employee Added Successfully!</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 sm:space-y-4">
                 <div className="space-y-2">
-                  <p>
+                  <p className="text-sm sm:text-base">
                     <strong>Name:</strong> {generatedEmployee.name}
                   </p>
-                  <p>
+                  <p className="text-sm sm:text-base">
                     <strong>Employee Code:</strong> {generatedEmployee.empCode}
                   </p>
-                  <p>
+                  <p className="text-sm sm:text-base">
                     <strong>Department:</strong>{" "}
                     {departments.find((d) => d.id === generatedEmployee.departmentId)?.name}
                   </p>
                 </div>
 
-                <div className="text-center space-y-4">
-                  <div className="bg-white p-4 rounded-lg inline-block" ref={barcodeRef}>
+                <div className="text-center space-y-3 sm:space-y-4">
+                  <div className="bg-white p-3 sm:p-4 rounded-lg inline-block" ref={barcodeRef}>
                     <Barcode
                       value={generatedEmployee.empCode}
                       width={2}

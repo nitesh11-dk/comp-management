@@ -5,7 +5,6 @@ import { dataStore } from "../../lib/data-store"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { roundTimeToNextHour } from "../../lib/time-utils"
 import BarcodeScanner from "../barcode-scanner"
 import { Scan, Clock, User, CheckCircle, XCircle, Zap, Building2 } from "lucide-react"
@@ -29,7 +28,7 @@ export default function SupervisorBarcodeScanner() {
     const user = dataStore.getCurrentUser()
     if (user && user.role === "supervisor") {
       setCurrentSupervisor(user)
-      // Set default category based on supervisor's assigned department
+      // Supervisor can only work with their assigned department
       if (user.departmentId) {
         setSelectedCategory(user.departmentId)
       }
@@ -94,8 +93,8 @@ export default function SupervisorBarcodeScanner() {
   const processBarcodeScan = async (scannedCode: string) => {
     if (!scannedCode.trim() || isProcessing) return
 
-    if (!selectedCategory) {
-      setMessage("❌ Please select a work category first")
+    if (!selectedCategory || !currentSupervisor?.departmentId) {
+      setMessage("❌ No department assigned to your account")
       setMessageType("error")
       playErrorSound()
       return
@@ -120,8 +119,23 @@ export default function SupervisorBarcodeScanner() {
         return
       }
 
+      // Check if employee belongs to supervisor's department
+      if (employee.departmentId !== currentSupervisor.departmentId) {
+        const employeeDept = dataStore.getDepartmentById(employee.departmentId)?.name || "Unknown"
+        const supervisorDept = dataStore.getDepartmentById(currentSupervisor.departmentId)?.name || "Unknown"
+
+        setMessage(
+          `❌ Access Denied!\n${employee.name} belongs to ${employeeDept}\nYou can only scan ${supervisorDept} employees`,
+        )
+        setMessageType("error")
+        setLastScannedEmployee(null)
+        playErrorSound()
+        return
+      }
+
       setLastScannedEmployee(employee)
 
+      // Rest of the existing logic remains the same...
       // Get current time and apply rounding logic
       const now = new Date()
       const timeData = roundTimeToNextHour(now)
@@ -137,7 +151,7 @@ export default function SupervisorBarcodeScanner() {
           employeeId: employee.id,
           inTime: timeData.realTime,
           displayInTime: timeData.displayTime,
-          departmentId: selectedCategory, // Use selected category instead of employee default
+          departmentId: selectedCategory,
           supervisorId: currentSupervisor?.id,
           workingCategory: selectedCategory,
         })
@@ -198,45 +212,47 @@ export default function SupervisorBarcodeScanner() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <h2 className="text-3xl font-bold mb-2">Supervisor Attendance Scanner</h2>
-        <p className="text-muted-foreground">Scan employee barcode to automatically record attendance</p>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="text-center px-2">
+        <h2 className="text-2xl sm:text-3xl font-bold mb-2">Supervisor Attendance Scanner</h2>
+        <p className="text-sm sm:text-base text-muted-foreground">
+          Scan employee barcode to automatically record attendance
+        </p>
         {currentSupervisor && (
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Logged in as: <span className="font-medium">{currentSupervisor.name}</span>
           </p>
         )}
       </div>
 
-      {/* Category Selection */}
+      {/* Category Selection - Restricted for Supervisor */}
       <Card className="border-2 border-blue-200">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5" />
-            Work Category Assignment
+        <CardHeader className="pb-3 sm:pb-6">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Building2 className="h-4 w-4 sm:h-5 sm:w-5" />
+            Your Assigned Work Category
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Select work category for this scan session:</label>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choose work category..." />
-              </SelectTrigger>
-              <SelectContent>
-                {dataStore.getDepartments().map((dept) => (
-                  <SelectItem key={dept.id} value={dept.id}>
-                    {dept.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {selectedCategory && (
-              <p className="text-xs text-muted-foreground">
-                All scanned employees will be assigned to:{" "}
-                <span className="font-medium">{dataStore.getDepartmentById(selectedCategory)?.name}</span>
-              </p>
+            {currentSupervisor?.departmentId ? (
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-blue-600" />
+                  <div>
+                    <p className="font-semibold text-blue-800">
+                      {dataStore.getDepartmentById(currentSupervisor.departmentId)?.name}
+                    </p>
+                    <p className="text-sm text-blue-600">You can only scan employees assigned to this category</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <Alert variant="destructive">
+                <AlertDescription>
+                  No department assigned to your supervisor account. Please contact admin.
+                </AlertDescription>
+              </Alert>
             )}
           </div>
         </CardContent>
@@ -244,29 +260,31 @@ export default function SupervisorBarcodeScanner() {
 
       {/* Scanner Status */}
       <Card className="border-2 border-dashed border-primary">
-        <CardContent className="pt-6">
-          <div className="text-center space-y-4">
+        <CardContent className="pt-4 sm:pt-6">
+          <div className="text-center space-y-3 sm:space-y-4">
             <div className="flex justify-center">
               {isProcessing ? (
-                <div className="p-4 bg-yellow-100 rounded-full">
-                  <Zap className="h-8 w-8 text-yellow-600 animate-pulse" />
+                <div className="p-3 sm:p-4 bg-yellow-100 rounded-full">
+                  <Zap className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-600 animate-pulse" />
                 </div>
               ) : (
-                <div className="p-4 bg-primary/10 rounded-full">
-                  <Scan className="h-8 w-8 text-primary animate-pulse" />
+                <div className="p-3 sm:p-4 bg-primary/10 rounded-full">
+                  <Scan className="h-6 w-6 sm:h-8 sm:w-8 text-primary animate-pulse" />
                 </div>
               )}
             </div>
 
             <div className="space-y-2">
-              <h3 className="text-xl font-semibold">{isProcessing ? "Processing..." : "Ready to Scan"}</h3>
+              <h3 className="text-lg sm:text-xl font-semibold">{isProcessing ? "Processing..." : "Ready to Scan"}</h3>
 
-              <Alert variant={messageType === "error" ? "destructive" : "default"}>
-                <div className="flex items-center gap-2">
-                  {messageType === "success" && <CheckCircle className="h-4 w-4" />}
-                  {messageType === "error" && <XCircle className="h-4 w-4" />}
-                  {messageType === "info" && <Scan className="h-4 w-4" />}
-                  <AlertDescription className="font-medium whitespace-pre-line">{message}</AlertDescription>
+              <Alert variant={messageType === "error" ? "destructive" : "default"} className="text-left">
+                <div className="flex items-start gap-2">
+                  {messageType === "success" && <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />}
+                  {messageType === "error" && <XCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />}
+                  {messageType === "info" && <Scan className="h-4 w-4 mt-0.5 flex-shrink-0" />}
+                  <AlertDescription className="font-medium whitespace-pre-line text-sm sm:text-base">
+                    {message}
+                  </AlertDescription>
                 </div>
               </Alert>
             </div>
@@ -302,25 +320,25 @@ export default function SupervisorBarcodeScanner() {
         <CardHeader>
           <CardTitle className="text-center">Demo Test Buttons</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-3 sm:pt-6">
           <div className="flex justify-center gap-2 flex-wrap">
             <button
               onClick={() => processBarcodeScan("RVK123")}
-              className="px-4 py-2 bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200 transition-colors"
+              className="px-3 py-2 text-xs sm:text-sm bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200 transition-colors"
               disabled={isProcessing || !selectedCategory}
             >
               Test: RVK123
             </button>
             <button
               onClick={() => processBarcodeScan("PRS456")}
-              className="px-4 py-2 bg-purple-100 text-purple-800 rounded-lg hover:bg-purple-200 transition-colors"
+              className="px-3 py-2 text-xs sm:text-sm bg-purple-100 text-purple-800 rounded-lg hover:bg-purple-200 transition-colors"
               disabled={isProcessing || !selectedCategory}
             >
               Test: PRS456
             </button>
             <button
               onClick={() => processBarcodeScan("AMS789")}
-              className="px-4 py-2 bg-green-100 text-green-800 rounded-lg hover:bg-green-200 transition-colors"
+              className="px-3 py-2 text-xs sm:text-sm bg-green-100 text-green-800 rounded-lg hover:bg-green-200 transition-colors"
               disabled={isProcessing || !selectedCategory}
             >
               Test: AMS789
@@ -334,29 +352,31 @@ export default function SupervisorBarcodeScanner() {
 
       {/* Recent Attendance Logs */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
+        <CardHeader className="pb-3 sm:pb-6">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
             Live Attendance Feed
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-3 max-h-96 overflow-y-auto">
+        <CardContent className="pt-0">
+          <div className="space-y-2 sm:space-y-3 max-h-96 overflow-y-auto">
             {recentLogs.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">No attendance records yet</p>
+              <p className="text-muted-foreground text-center py-8 text-sm sm:text-base">No attendance records yet</p>
             ) : (
               recentLogs.map((log) => (
                 <div
                   key={log.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 border rounded-lg hover:bg-muted/50 transition-colors space-y-2 sm:space-y-0"
                 >
                   <div className="flex items-center gap-3">
                     <div className={`p-2 rounded-full ${log.status === "IN" ? "bg-green-100" : "bg-red-100"}`}>
-                      <User className={`h-4 w-4 ${log.status === "IN" ? "text-green-600" : "text-red-600"}`} />
+                      <User
+                        className={`h-3 w-3 sm:h-4 sm:w-4 ${log.status === "IN" ? "text-green-600" : "text-red-600"}`}
+                      />
                     </div>
                     <div>
-                      <p className="font-semibold">{log.employee?.name}</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="font-semibold text-sm sm:text-base">{log.employee?.name}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
                         {log.employee?.empCode} • {log.department?.name}
                       </p>
                       {log.supervisor && (
@@ -364,10 +384,12 @@ export default function SupervisorBarcodeScanner() {
                       )}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge variant={log.status === "IN" ? "default" : "secondary"}>{log.status}</Badge>
-                      <div className="text-sm">
+                  <div className="text-left sm:text-right">
+                    <div className="flex flex-row sm:flex-col items-start sm:items-end gap-2 sm:gap-1 mb-1">
+                      <Badge variant={log.status === "IN" ? "default" : "secondary"} className="text-xs">
+                        {log.status}
+                      </Badge>
+                      <div className="text-xs sm:text-sm">
                         <div className="font-mono">
                           {log.displayInTime || log.displayOutTime
                             ? new Date(

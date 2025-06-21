@@ -153,23 +153,27 @@ export default function EmployeeDetailPage() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => router.back()}>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <Button variant="outline" onClick={() => router.back()} size="sm">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
+            Back
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">{employee.name}</h1>
-            <p className="text-muted-foreground">Employee Code: {employee.empCode}</p>
+            <h1 className="text-xl sm:text-2xl font-bold">{employee.name}</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">Employee Code: {employee.empCode}</p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setViewMode(viewMode === "calendar" ? "list" : "calendar")}>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button
+            variant="outline"
+            onClick={() => setViewMode(viewMode === "calendar" ? "list" : "calendar")}
+            className="w-full sm:w-auto"
+          >
             <Calendar className="h-4 w-4 mr-2" />
             {viewMode === "calendar" ? "List View" : "Calendar View"}
           </Button>
-          <Button variant="outline" onClick={exportAttendanceData}>
+          <Button variant="outline" onClick={exportAttendanceData} className="w-full sm:w-auto">
             <Download className="h-4 w-4 mr-2" />
             Export CSV
           </Button>
@@ -177,12 +181,12 @@ export default function EmployeeDetailPage() {
       </div>
 
       {/* Employee Profile */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Employee Details</CardTitle>
+            <CardTitle className="text-base sm:text-lg">Employee Details</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 sm:space-y-4">
             <div>
               <label className="text-sm font-medium text-muted-foreground">Full Name</label>
               <p className="font-medium">{employee.name}</p>
@@ -278,7 +282,7 @@ export default function EmployeeDetailPage() {
           {viewMode === "calendar" ? (
             <div className="space-y-4">
               {/* Calendar Header */}
-              <div className="grid grid-cols-7 gap-2 text-center text-sm font-medium text-muted-foreground">
+              <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center text-xs sm:text-sm font-medium text-muted-foreground">
                 <div>Sun</div>
                 <div>Mon</div>
                 <div>Tue</div>
@@ -289,21 +293,27 @@ export default function EmployeeDetailPage() {
               </div>
 
               {/* Calendar Days */}
-              <div className="grid grid-cols-7 gap-2">
+              <div className="grid grid-cols-7 gap-1 sm:gap-2">
                 {generateCalendarDays().map((day, index) => (
                   <div
                     key={index}
-                    className={`min-h-[80px] p-2 border rounded-lg ${
+                    className={`min-h-[60px] sm:min-h-[80px] p-1 sm:p-2 border rounded-lg ${
                       day.isCurrentMonth ? "bg-white" : "bg-gray-50"
                     } ${day.log ? getStatusColor(day.log) : ""}`}
                   >
-                    <div className="text-sm font-medium">{day.date.format("D")}</div>
+                    <div className="text-xs sm:text-sm font-medium">{day.date.format("D")}</div>
                     {day.log && day.isCurrentMonth && (
                       <div className="text-xs space-y-1">
-                        <div>{getStatusText(day.log)}</div>
-                        {day.log.inTime && <div>In: {dayjs(day.log.inTime).format("HH:mm")}</div>}
-                        {day.log.outTime && <div>Out: {dayjs(day.log.outTime).format("HH:mm")}</div>}
-                        {day.log.totalHours > 0 && <div className="font-medium">{day.log.totalHours.toFixed(1)}h</div>}
+                        <div className="hidden sm:block">{getStatusText(day.log)}</div>
+                        {day.log.inTime && (
+                          <div className="hidden sm:block">In: {dayjs(day.log.inTime).format("HH:mm")}</div>
+                        )}
+                        {day.log.outTime && (
+                          <div className="hidden sm:block">Out: {dayjs(day.log.outTime).format("HH:mm")}</div>
+                        )}
+                        {day.log.totalHours > 0 && (
+                          <div className="font-medium text-xs">{day.log.totalHours.toFixed(1)}h</div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -311,38 +321,42 @@ export default function EmployeeDetailPage() {
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {attendanceData?.logs.map((log: any) => (
-                <Card key={log.id} className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
+                <Card key={log.id} className="p-3 sm:p-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-3 sm:space-y-0">
+                    <div className="flex items-center gap-3 sm:gap-4">
                       <div className="text-center">
-                        <div className="text-lg font-bold">{dayjs(log.date).format("DD")}</div>
-                        <div className="text-sm text-muted-foreground">{dayjs(log.date).format("MMM")}</div>
+                        <div className="text-base sm:text-lg font-bold">{dayjs(log.date).format("DD")}</div>
+                        <div className="text-xs sm:text-sm text-muted-foreground">{dayjs(log.date).format("MMM")}</div>
                       </div>
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4" />
-                          <span>
+                          <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span className="text-xs sm:text-sm">
                             {log.inTime ? dayjs(log.inTime).format("HH:mm") : "--:--"} -{" "}
                             {log.outTime ? dayjs(log.outTime).format("HH:mm") : "--:--"}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4" />
-                          <span>{log.department?.name || "N/A"}</span>
+                          <Building2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span className="text-xs sm:text-sm">{log.department?.name || "N/A"}</span>
                         </div>
                         {log.supervisor && (
                           <div className="flex items-center gap-2">
-                            <User className="h-4 w-4" />
-                            <span>{log.supervisor.name}</span>
+                            <User className="h-3 w-3 sm:h-4 sm:w-4" />
+                            <span className="text-xs sm:text-sm">{log.supervisor.name}</span>
                           </div>
                         )}
                       </div>
                     </div>
-                    <div className="text-right space-y-2">
-                      <Badge className={getStatusColor(log)}>{getStatusText(log)}</Badge>
-                      {log.totalHours > 0 && <div className="text-lg font-bold">{log.totalHours.toFixed(1)}h</div>}
+                    <div className="text-left sm:text-right space-y-2 w-full sm:w-auto">
+                      <Badge className={getStatusColor(log)} size="sm">
+                        {getStatusText(log)}
+                      </Badge>
+                      {log.totalHours > 0 && (
+                        <div className="text-base sm:text-lg font-bold">{log.totalHours.toFixed(1)}h</div>
+                      )}
                     </div>
                   </div>
                 </Card>
@@ -354,22 +368,22 @@ export default function EmployeeDetailPage() {
 
       {/* Category and Supervisor Summary */}
       {attendanceData && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           <Card>
             <CardHeader>
-              <CardTitle>Work by Category</CardTitle>
+              <CardTitle className="text-base sm:text-lg">Work by Category</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {Object.entries(attendanceData.categoryStats).map(([categoryId, stats]: [string, any]) => (
-                  <div key={categoryId} className="flex justify-between items-center p-3 border rounded-lg">
+                  <div key={categoryId} className="flex justify-between items-center p-2 sm:p-3 border rounded-lg">
                     <div>
-                      <div className="font-medium">{stats.name}</div>
-                      <div className="text-sm text-muted-foreground">{stats.days} days</div>
+                      <div className="font-medium text-sm sm:text-base">{stats.name}</div>
+                      <div className="text-xs sm:text-sm text-muted-foreground">{stats.days} days</div>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold">{stats.hours.toFixed(1)}h</div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="font-bold text-sm sm:text-base">{stats.hours.toFixed(1)}h</div>
+                      <div className="text-xs sm:text-sm text-muted-foreground">
                         ₹{(stats.hours * employee.hourlyRate).toFixed(0)}
                       </div>
                     </div>
@@ -381,18 +395,18 @@ export default function EmployeeDetailPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Supervisors Worked With</CardTitle>
+              <CardTitle className="text-base sm:text-lg">Supervisors Worked With</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {Object.entries(attendanceData.supervisorStats).map(([supervisorId, stats]: [string, any]) => (
-                  <div key={supervisorId} className="flex justify-between items-center p-3 border rounded-lg">
+                  <div key={supervisorId} className="flex justify-between items-center p-2 sm:p-3 border rounded-lg">
                     <div>
-                      <div className="font-medium">{stats.name}</div>
-                      <div className="text-sm text-muted-foreground">{stats.days} days</div>
+                      <div className="font-medium text-sm sm:text-base">{stats.name}</div>
+                      <div className="text-xs sm:text-sm text-muted-foreground">{stats.days} days</div>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold">{stats.hours.toFixed(1)}h</div>
+                      <div className="font-bold text-sm sm:text-base">{stats.hours.toFixed(1)}h</div>
                     </div>
                   </div>
                 ))}
