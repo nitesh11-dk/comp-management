@@ -453,8 +453,8 @@ export default function SupervisorBarcodeScanner() {
                         <div className="font-mono">
                           {log.displayInTime || log.displayOutTime
                             ? new Date(
-                                log.status === "IN" ? log.displayInTime : log.displayOutTime,
-                              ).toLocaleTimeString()
+                              log.status === "IN" ? log.displayInTime : log.displayOutTime,
+                            ).toLocaleTimeString()
                             : new Date(log.status === "IN" ? log.inTime : log.outTime).toLocaleTimeString()}
                         </div>
                       </div>
