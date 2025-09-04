@@ -1,25 +1,17 @@
-"use client";
+import React, { useEffect, useState } from "react";
+import { Html5Qrcode } from "html5-qrcode";
 
-import { useEffect, useRef, useState } from "react";
-import Webcam from "react-webcam";
-import Quagga from "@ericblade/quagga2";
-
-export default function CameraBarcodeScanner() {
-    const webcamRef = useRef<Webcam>(null);
-    const [preview, setPreview] = useState<string | null>(null);
-    const [barcode, setBarcode] = useState<string | null>(null);
-    const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
-    const [selectedDevice, setSelectedDevice] = useState<string>("");
+export default function BarcodeScanner() {
+    const [devices, setDevices] = useState([]);
+    const [selectedDevice, setSelectedDevice] = useState(null);
+    const [scanner, setScanner] = useState(null);
 
     useEffect(() => {
-        // Request permission first
+        // Request permission & list devices
         navigator.mediaDevices
             .getUserMedia({ video: true })
             .then((stream) => {
-                // Stop stream after permission granted (we only needed the access prompt)
                 stream.getTracks().forEach((track) => track.stop());
-
-                // Now enumerate devices
                 return navigator.mediaDevices.enumerateDevices();
             })
             .then((mediaDevices) => {
@@ -35,116 +27,54 @@ export default function CameraBarcodeScanner() {
             });
     }, []);
 
+    useEffect(() => {
+        if (selectedDevice) {
+            const html5QrCode = new Html5Qrcode("reader");
 
-    const capturePhoto = () => {
-        const imageSrc = webcamRef.current?.getScreenshot();
-        if (imageSrc) {
-            setPreview(imageSrc);
-            decodeBarcode(imageSrc);
+            html5QrCode
+                .start(
+                    { deviceId: { exact: selectedDevice } },
+                    { fps: 10, qrbox: { width: 250, height: 250 } },
+                    (decodedText) => {
+                        console.log("Scanned result:", decodedText);
+                        alert(`Scanned code: ${decodedText}`);
+                    },
+                    (errorMessage) => {
+                        // Optional: handle scan errors
+                        console.log("Scanning error:", errorMessage);
+                    }
+                )
+                .then(() => setScanner(html5QrCode))
+                .catch((err) => console.error("Unable to start scanner:", err));
+
+            return () => {
+                html5QrCode.stop().catch((err) => console.error("Stop failed:", err));
+            };
         }
-    };
-
-    const decodeBarcode = (imageSrc: string) => {
-        Quagga.decodeSingle(
-            {
-                src: imageSrc,
-                numOfWorkers: 0,
-                inputStream: { size: 800 },
-                decoder: {
-                    readers: ["code_128_reader", "ean_reader", "ean_8_reader", "upc_reader"],
-                },
-            },
-            (res) => {
-                if (res?.codeResult?.code) {
-                    console.log("✅ Barcode detected:", res.codeResult.code);
-                    setBarcode(res.codeResult.code);
-                } else {
-                    console.log("❌ No barcode found");
-                    setBarcode("❌ No barcode found");
-                }
-            }
-        );
-    };
+    }, [selectedDevice]);
 
     return (
-        <div className="p-4 max-w-md mx-auto">
-            <h1 className="text-xl font-bold mb-3">📸 Camera Barcode Scanner</h1>
+        <div className="p-4">
+            <h1 className="text-lg font-bold mb-2">Barcode Scanner</h1>
 
-            {/* Camera Selector */}
-            {devices.length > 0 && (
-                <div className="mb-3">
-                    <label className="mr-2 font-medium">Choose Camera:</label>
-                    <select
-                        value={selectedDevice}
-                        onChange={(e) => setSelectedDevice(e.target.value)}
-                        className="border p-1 rounded"
-                    >
-                        {devices.map((device, idx) => (
-                            <option key={device.deviceId} value={device.deviceId}>
-                                {device.label || `Camera ${idx + 1}`}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-            )}
+            {/* Dropdown for camera selection */}
+            <select
+                value={selectedDevice || ""}
+                onChange={(e) => setSelectedDevice(e.target.value)}
+                className="border p-2 rounded mb-4"
+            >
+                {devices.map((device, i) => (
+                    <option key={i} value={device.deviceId}>
+                        {device.label || `Camera ${i + 1}`}
+                    </option>
+                ))}
+            </select>
 
-            {/* Webcam or Preview */}
-            {!preview && selectedDevice && (
-                <Webcam
-                    audio={false}
-                    ref={webcamRef}
-                    screenshotFormat="image/jpeg"
-                    videoConstraints={{
-                        deviceId: selectedDevice ? { exact: selectedDevice } : undefined,
-                        facingMode: "environment",
-                        width: 320, // 👈 Smaller width
-                        height: 240, // 👈 Smaller height
-                    }}
-                    style={{
-                        width: "320px",
-                        height: "240px",
-                        borderRadius: "8px",
-                        border: "2px solid #ddd",
-                    }}
-                />
-            )}
-
-            {/* Buttons */}
-            <div className="mt-3 flex gap-2">
-                {!preview && (
-                    <button
-                        onClick={capturePhoto}
-                        className="px-4 py-2 bg-blue-600 text-white rounded"
-                    >
-                        Capture
-                    </button>
-                )}
-                {preview && (
-                    <button
-                        onClick={() => {
-                            setPreview(null);
-                            setBarcode(null);
-                        }}
-                        className="px-4 py-2 bg-gray-600 text-white rounded"
-                    >
-                        Retake
-                    </button>
-                )}
-            </div>
-
-            {/* Preview */}
-            {preview && (
-                <div className="mt-4">
-                    <img src={preview} alt="Captured" className="max-h-64 border" />
-                </div>
-            )}
-
-            {/* Barcode Result */}
-            {barcode && (
-                <div className="mt-3 p-2 bg-green-200 rounded">
-                    📦 Detected Barcode: <strong>{barcode}</strong>
-                </div>
-            )}
+            {/* Scanner container */}
+            <div
+                id="reader"
+                style={{ width: "300px", height: "300px", border: "1px solid #ccc" }}
+            ></div>
         </div>
     );
 }
