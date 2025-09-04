@@ -6,7 +6,7 @@ import BarcodeScanner from "../barcode-scanner"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Scan, User, CheckCircle, XCircle } from "lucide-react"
+import { Scan, User, CheckCircle, XCircle, Clock } from "lucide-react"
 
 type Props = {
   scanEmployee: (employeeId: string) => Promise<ScanResult>
@@ -14,6 +14,7 @@ type Props = {
 
 export default function SupervisorBarcodeScanner({ scanEmployee }: Props) {
   const [lastScannedEmployee, setLastScannedEmployee] = useState<ScanResult | null>(null)
+  const [scanTime, setScanTime] = useState<Date | null>(null)
   const [message, setMessage] = useState("Ready to scan employee barcode...")
   const [messageType, setMessageType] = useState<"success" | "error" | "info" | "warning">("info")
   const [isProcessing, setIsProcessing] = useState(false)
@@ -41,7 +42,9 @@ export default function SupervisorBarcodeScanner({ scanEmployee }: Props) {
     try {
       const result = await scanEmployee(employeeId)
       setLastScannedEmployee(result)
-      setMessage(`✅ Employee ${result.employeeName} CHECKED ${result.lastScanType?.toUpperCase()}`)
+      const now = new Date()
+      setScanTime(now)
+      setMessage(`✅ Employee ${result.employeeName} CHECKED ${result.lastScanType?.toUpperCase()} at ${now.toLocaleTimeString()}`)
       setMessageType("success")
       playSound("success")
     } catch (err: any) {
@@ -86,16 +89,24 @@ export default function SupervisorBarcodeScanner({ scanEmployee }: Props) {
             {lastScannedEmployee && (
               <Card className="border-2 border-green-200 bg-green-50">
                 <CardContent>
-                  <div className="flex items-center justify-center gap-4">
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                     <div className="p-2 rounded-full bg-green-100">
                       <User className="h-6 w-6 text-green-600" />
                     </div>
-                    <div className="text-center">
+                    <div className="text-center sm:text-left">
                       <h4 className="font-bold text-lg">{lastScannedEmployee.employeeName}</h4>
                       <p className="text-sm text-gray-500">ID: {lastScannedEmployee.employeeId}</p>
-                      <Badge variant="default" className="mt-1">
-                        {lastScannedEmployee.lastScanType === "out" ? "Checked OUT" : "Currently IN"}
-                      </Badge>
+                      <div className="flex items-center justify-center sm:justify-start gap-2 mt-1">
+                        <Badge variant="default">
+                          {lastScannedEmployee.lastScanType === "out" ? "Checked OUT" : "Currently IN"}
+                        </Badge>
+                        {scanTime && (
+                          <div className="flex items-center gap-1 text-gray-600 text-sm">
+                            <Clock className="h-4 w-4" />
+                            {scanTime.toLocaleTimeString()}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -105,17 +116,13 @@ export default function SupervisorBarcodeScanner({ scanEmployee }: Props) {
         </CardContent>
       </Card>
 
+      {/* Barcode Scanner */}
       <div className="space-y-2">
-
-
         <BarcodeScanner
           onScan={handleScan}
           isActive={isScannerActive}
           onToggle={toggleScanner}
         />
-
-
-
       </div>
     </div>
   )
