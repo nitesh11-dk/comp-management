@@ -1,5 +1,6 @@
 "use server";
 
+import { getUserFromCookies } from "@/lib/auth";
 import Department, { IDepartment } from "@/lib/models/Department";
 import connect from "@/lib/mongo";
 import { ActionResponse } from "@/lib/types/types";
@@ -86,6 +87,32 @@ export async function deleteDepartment(
             return { success: false, message: "Department not found", data: null };
         }
         return { success: true, message: "Department deleted", data: null };
+    } catch (error: any) {
+        return { success: false, message: error.message, data: null };
+    }
+}
+
+
+export async function getCurrentUserDepartment(): Promise<
+    ActionResponse<IDepartment | null>
+> {
+    try {
+        await connect();
+        const user = await getUserFromCookies();
+        if (!user) {
+            return { success: false, message: "User not authenticated", data: null };
+        }
+
+        if (!user.departmentId) {
+            return { success: false, message: "User has no assigned department", data: null };
+        }
+
+        const department = await Department.findById(user.departmentId);
+        if (!department) {
+            return { success: false, message: "Department not found", data: null };
+        }
+
+        return { success: true, message: "User department fetched", data: department };
     } catch (error: any) {
         return { success: false, message: error.message, data: null };
     }
