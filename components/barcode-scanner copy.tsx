@@ -45,9 +45,7 @@ export default function SupervisorBarcodeScanner({ scanEmployee }: Props) {
       setLastScannedEmployee(result)
       const now = new Date()
       setScanTime(now)
-      setMessage(
-        `✅ Employee ${result.employeeName} (Code: ${result.empCode}) CHECKED ${result.lastScanType?.toUpperCase()} at ${now.toLocaleTimeString()}`
-      )
+      setMessage(`✅ Employee ${result.employeeName} CHECKED ${result.lastScanType?.toUpperCase()} at ${now.toLocaleTimeString()}`)
       setMessageType("success")
       playSound("success")
     } catch (err: any) {
@@ -67,13 +65,19 @@ export default function SupervisorBarcodeScanner({ scanEmployee }: Props) {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center space-y-6 px-4 py-4 max-w-lg mx-auto">
+    <div className="flex flex-col items-center justify-center space-y-6 px-2 sm:px-4 py-4 max-w-lg mx-auto">
       <h2 className="text-2xl sm:text-3xl font-bold text-center">Supervisor Attendance Scanner</h2>
 
       <Card className="w-full border-2 border-dashed border-primary">
         <CardContent className="space-y-4">
           <div className="w-full text-center">
-
+            <Alert variant={messageType === "error" ? "destructive" : "default"}>
+              <div className="flex items-start justify-center gap-2">
+                {messageType === "success" && <CheckCircle className="h-5 w-5 mt-0.5" />}
+                {messageType === "error" && <XCircle className="h-5 w-5 mt-0.5" />}
+                <AlertDescription>{message}</AlertDescription>
+              </div>
+            </Alert>
 
             {lastScannedEmployee && (
               <Card className="border-2 border-green-200 bg-green-50 mt-4">
@@ -84,7 +88,7 @@ export default function SupervisorBarcodeScanner({ scanEmployee }: Props) {
                     </div>
                     <div className="text-center sm:text-left">
                       <h4 className="font-bold text-lg">{lastScannedEmployee.employeeName}</h4>
-                      <p className="text-sm text-gray-500">EmpCode: {lastScannedEmployee.empCode}</p>
+                      <p className="text-sm text-gray-500">ID: {lastScannedEmployee.employeeId}</p>
                       <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 mt-1">
                         <Badge variant="default">
                           {lastScannedEmployee.lastScanType === "out" ? "Checked OUT" : "Currently IN"}
@@ -111,7 +115,7 @@ export default function SupervisorBarcodeScanner({ scanEmployee }: Props) {
           onScan={handleScan}
           fps={10}
           qrboxSize={300}
-          style={{ margin: "0 auto", maxWidth: "100%" }}
+          style={{ margin: "0 auto" }}
         />
       </Card>
 
@@ -120,13 +124,13 @@ export default function SupervisorBarcodeScanner({ scanEmployee }: Props) {
         <input
           type="text"
           placeholder="Enter EmpCode manually"
-          className="border rounded px-3 py-2 flex-1 text-center sm:text-left w-full"
+          className="border rounded px-3 py-2 flex-1 text-center sm:text-left"
           value={manualInput}
           onChange={(e) => setManualInput(e.target.value.toUpperCase())}
         />
         <button
           type="submit"
-          className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90 w-full sm:w-auto"
+          className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
         >
           Submit
         </button>
