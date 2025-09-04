@@ -5,6 +5,7 @@ import connect from "@/lib/mongo";
 import Employee, { IEmployee } from "@/lib/models/Employee";
 import { ActionResponse } from "@/lib/types/types";
 import mongoose from "mongoose";
+import Department from "@/lib/models/Department";
 
 export async function createEmployee(
     data: Partial<IEmployee>
@@ -64,12 +65,14 @@ export async function createEmployee(
     }
 }
 
+
+
+// 🔹 Get All Employees
 export async function getEmployees(): Promise<ActionResponse<IEmployee[]>> {
     try {
         await connect();
 
-        // 🔹 Fetch employees only, no populate
-        const employees = await Employee.find().lean(); // lean() to get plain JS objects
+        const employees = await Employee.find().populate("departmentId");
 
         return {
             success: true,
@@ -81,11 +84,9 @@ export async function getEmployees(): Promise<ActionResponse<IEmployee[]>> {
         return {
             success: false,
             message: error.message || "Failed to fetch employees",
-            data: [],
         };
     }
 }
-
 
 
 
@@ -101,7 +102,7 @@ export async function getEmployeeById(id: string): Promise<ActionResponse<IEmplo
             return { success: false, message: "Invalid employee ID" };
         }
 
-        const employee = await Employee.findById(id);
+        const employee = await Employee.findById(id).populate("departmentId");
         if (!employee) {
             return { success: false, message: "Employee not found" };
         }

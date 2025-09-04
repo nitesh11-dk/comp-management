@@ -1,10 +1,14 @@
+// app/actions/attendance.ts (server)
 import mongoose from "mongoose";
 import AttendanceWalletModel, { IAttendanceWallet } from "@/lib/models/EmployeeAttendanceWallet";
-import { getUserFromCookies, getUserFromToken } from "@/lib/auth";
+import connect from "@/lib/mongo";
+import { getUserFromCookies } from "@/lib/auth";
 
-// ---------------------------
-// 🔹 Input interface
-// ---------------------------
+export async function getEmployeeAttendance(employeeId: string) {
+    await connect(); // ensure DB connection
+    const wallet = await AttendanceWalletModel.findOne({ employeeId: new mongoose.Types.ObjectId(employeeId) }).lean();
+    return wallet;
+}
 
 
 export interface ScanAttendanceInput {
@@ -73,15 +77,7 @@ export async function scanEmployee(input: ScanAttendanceInput): Promise<ScanResu
 }
 
 // ---------------------------
-// 🔹 Get employee attendance for admin (optional helper)
-// ---------------------------
-export async function getEmployeeAttendance(employeeId: mongoose.Types.ObjectId) {
-    const wallet = await AttendanceWalletModel.findOne({ employeeId });
-    if (!wallet) return null;
 
-    // You can filter entries by date/week/month on frontend or here
-    return wallet;
-}
 
 // ================================
 // 🔹 Get attendance wallet for employee
