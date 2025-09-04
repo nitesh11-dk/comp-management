@@ -39,6 +39,7 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@zxing/browser": "^0.1.5",
     "autoprefixer": "^10.0.1",
     "bcryptjs": "^3.0.2",
     "class-variance-authority": "^0.7.1",
