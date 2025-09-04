@@ -12,13 +12,11 @@ import Barcode from "react-barcode"
 import html2canvas from "html2canvas"
 import { useRouter } from "next/navigation"
 
-
 export default function EmployeeManagement() {
   const [employees, setEmployees] = useState<any[]>([])
   const [departments, setDepartments] = useState<any[]>([])
   const barcodeRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
   const router = useRouter()
-
 
   // Fetch employees and departments
   useEffect(() => {
@@ -39,13 +37,13 @@ export default function EmployeeManagement() {
     return departments.find((dep) => dep._id === id)?.name || "Unknown"
   }
 
-  const downloadBarcode = async (empId: string) => {
+  const downloadBarcode = async (empId: string, empCode: string) => {
     const barcodeDiv = barcodeRefs.current[empId]
     if (!barcodeDiv) return
     try {
       const canvas = await html2canvas(barcodeDiv, { backgroundColor: "#ffffff", scale: 2 })
       const link = document.createElement("a")
-      link.download = `employee_${empId}_barcode.png`
+      link.download = `employee_${empCode}_barcode.png` // Use empCode in filename
       link.href = canvas.toDataURL("image/png")
       link.click()
     } catch (error) {
@@ -79,13 +77,13 @@ export default function EmployeeManagement() {
                   <TableCell className="hidden sm:table-cell">{emp.mobile}</TableCell>
                   <TableCell>
                     <div ref={(el) => (barcodeRefs.current[emp._id] = el)}>
-                      <Barcode value={emp._id} width={2} height={60} fontSize={12} />
+                      <Barcode value={emp.empCode} width={2} height={60} fontSize={12} />
                     </div>
                     <Button
                       size="sm"
                       variant="outline"
                       className="mt-1"
-                      onClick={() => downloadBarcode(emp._id)}
+                      onClick={() => downloadBarcode(emp._id, emp.empCode)} // Pass empCode
                     >
                       <Download className="h-3 w-3 mr-1" />
                       Download
@@ -109,7 +107,7 @@ export default function EmployeeManagement() {
                         size="sm"
                         variant="outline"
                         className="hidden sm:inline-flex"
-                        onClick={() => router.push(`/admin/dashboard/employee/edit?id=${emp._id}`)}
+                        onClick={() => router.push(`/admin/dashboard/employee/edit/${emp._id}`)}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -118,7 +116,6 @@ export default function EmployeeManagement() {
                       </Button>
                     </div>
                   </TableCell>
-
                 </TableRow>
               ))}
             </TableBody>

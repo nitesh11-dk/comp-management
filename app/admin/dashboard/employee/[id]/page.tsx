@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -8,12 +8,14 @@ import { ArrowLeft, Download } from "lucide-react"
 import html2canvas from "html2canvas"
 import { getEmployeeById } from "@/actions/employeeActions"
 import { getDepartmentById } from "@/actions/department"
+import Barcode from "react-barcode"
 
 export default function EmployeeDetailPage() {
   const params = useParams()
   const router = useRouter()
   const [employee, setEmployee] = useState<any>(null)
   const [department, setDepartment] = useState<any>(null)
+  const barcodeRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     const loadEmployeeData = async () => {
@@ -35,34 +37,16 @@ export default function EmployeeDetailPage() {
     loadEmployeeData()
   }, [params.id, router])
 
-  const downloadEmployeeBarcode = async (id: string) => {
-    const tempDiv = document.createElement("div")
-    tempDiv.style.position = "absolute"
-    tempDiv.style.left = "-9999px"
-    tempDiv.innerHTML = `<div style="background: white; padding: 20px;">
-      <svg id="temp-barcode"></svg>
-    </div>`
-    document.body.appendChild(tempDiv)
-
-    const JsBarcode = require("jsbarcode")
-    JsBarcode("#temp-barcode", id, {
-      width: 2,
-      height: 60,
-      fontSize: 14,
-      background: "#ffffff",
-      lineColor: "#000000",
-    })
-
+  const downloadEmployeeBarcode = async () => {
+    if (!barcodeRef.current) return
     try {
-      const canvas = await html2canvas(tempDiv.firstChild as HTMLElement, { backgroundColor: "#ffffff", scale: 2 })
+      const canvas = await html2canvas(barcodeRef.current, { backgroundColor: "#ffffff", scale: 2 })
       const link = document.createElement("a")
-      link.download = `employee_${id}_barcode.png`
+      link.download = `employee_${employee.empCode}_barcode.png`
       link.href = canvas.toDataURL("image/png")
       link.click()
     } catch (err) {
       console.error(err)
-    } finally {
-      document.body.removeChild(tempDiv)
     }
   }
 
@@ -86,7 +70,7 @@ export default function EmployeeDetailPage() {
             <CardTitle>Employee Info</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <p><strong>ID:</strong> {employee._id}</p>
+            <p><strong>EmpCode:</strong> {employee.empCode}</p>
             <p><strong>Name:</strong> {employee.name}</p>
             <p><strong>Mobile:</strong> {employee.mobile}</p>
             <p><strong>Aadhaar:</strong> {employee.aadhaarNumber}</p>
@@ -99,13 +83,16 @@ export default function EmployeeDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Download Barcode Button */}
+        {/* Barcode Display and Download */}
         <Card>
           <CardHeader>
             <CardTitle>Barcode</CardTitle>
           </CardHeader>
-          <CardContent className="text-center">
-            <Button variant="outline" onClick={() => downloadEmployeeBarcode(employee._id)} className="w-full">
+          <CardContent className="text-center flex flex-col items-center gap-4">
+            <div ref={barcodeRef} className="p-4 bg-white inline-block">
+              <Barcode value={employee.empCode} width={2} height={60} fontSize={14} />
+            </div>
+            <Button variant="outline" onClick={downloadEmployeeBarcode} className="w-full">
               <Download className="h-4 w-4 mr-2" />
               Download Barcode
             </Button>
