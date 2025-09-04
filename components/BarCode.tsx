@@ -8,6 +8,7 @@ type BarcodeScannerProps = {
     fps?: number;
     qrboxSize?: number;
     style?: React.CSSProperties;
+    openTriggerCount?: number; // number-based trigger for repeated scanner open
 };
 
 export default function BarcodeScanner({
@@ -15,13 +16,15 @@ export default function BarcodeScanner({
     fps = 10,
     qrboxSize = 250,
     style,
+    openTriggerCount = 0,
 }: BarcodeScannerProps) {
     const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
     const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
+    const [scannerOpen, setScannerOpen] = useState(false);
     const scannerRef = useRef<Html5Qrcode | null>(null);
-    const lastScannedRef = useRef<string | null>(null); // store last scanned code
+    const lastScannedRef = useRef<string | null>(null);
 
-    // 🔹 Detect cameras on mount
+    // Detect cameras on mount
     useEffect(() => {
         navigator.mediaDevices
             .getUserMedia({ video: true })
@@ -33,7 +36,6 @@ export default function BarcodeScanner({
                 const videoDevices = mediaDevices.filter((d) => d.kind === "videoinput");
                 setDevices(videoDevices);
 
-                // Prefer rear camera on mobile
                 const rearCamera = videoDevices.find((d) =>
                     /rear|back|environment/i.test(d.label)
                 );
@@ -45,9 +47,16 @@ export default function BarcodeScanner({
             });
     }, []);
 
-    // 🔹 Start scanner when a device is selected
+    // Open scanner whenever openTriggerCount changes
     useEffect(() => {
-        if (!selectedDevice) return;
+        if (openTriggerCount > 0) {
+            setScannerOpen(true);
+        }
+    }, [openTriggerCount]);
+
+    // Start/Stop scanner
+    useEffect(() => {
+        if (!scannerOpen || !selectedDevice) return;
 
         const html5QrCode = new Html5Qrcode("reader");
 
@@ -56,17 +65,17 @@ export default function BarcodeScanner({
                 { deviceId: { exact: selectedDevice } },
                 { fps, qrbox: { width: qrboxSize, height: qrboxSize } },
                 (decodedText) => {
-                    // ✅ Prevent duplicate scans in a short interval
                     if (lastScannedRef.current !== decodedText) {
                         lastScannedRef.current = decodedText;
                         onScan(decodedText);
 
-                        // Reset after 1.5 seconds to allow same code to be scanned again
+                        // Close scanner after one scan
+                        setScannerOpen(false);
+
                         setTimeout(() => (lastScannedRef.current = null), 1500);
                     }
                 },
                 (errorMessage) => {
-                    // Ignore "NotFoundException" to prevent infinite loop spam
                     if (!/NotFoundException/i.test(errorMessage)) {
                         console.warn("QR scan error:", errorMessage);
                     }
@@ -78,26 +87,23 @@ export default function BarcodeScanner({
             .catch((err) => console.error("Unable to start scanner:", err));
 
         return () => {
-            // ✅ Stop & clear safely
             if (scannerRef.current) {
                 scannerRef.current
                     .stop()
                     .then(() => scannerRef.current?.clear())
-                    .catch(() => {
-                        /* ignore stop errors */
-                    });
+                    .catch(() => { });
             }
         };
-    }, [selectedDevice, fps, qrboxSize, onScan]);
+    }, [scannerOpen, selectedDevice, fps, qrboxSize, onScan]);
 
     return (
-        <div className="p-2 w-full  max-w-md mx-auto">
-            {/* Camera selector (only if multiple cameras) */}
+        <div className="p-2 w-full max-w-md mx-auto">
+            {/* Camera selector */}
             {devices.length > 1 && (
                 <select
                     value={selectedDevice || ""}
                     onChange={(e) => setSelectedDevice(e.target.value)}
-                    className="border p-2  rounded mb-4 w-full"
+                    className="border p-2 rounded mb-4 w-full"
                 >
                     {devices.map((device, i) => (
                         <option key={i} value={device.deviceId}>
@@ -107,18 +113,28 @@ export default function BarcodeScanner({
                 </select>
             )}
 
+            {/* Toggle button */}
+            <button
+                onClick={() => setScannerOpen((prev) => !prev)}
+                className="bg-blue-500 text-white py-2 px-4 rounded mb-4 w-full"
+            >
+                {scannerOpen ? "Close Scanner" : "Open Scanner"}
+            </button>
+
             {/* Scanner container */}
-            <div
-                id="reader"
-                style={{
-                    width: "100%",
-                    maxWidth: qrboxSize,
-                    aspectRatio: "2 / 1",
-                    border: "1px solid #ccc",
-                    margin: "0 auto",
-                    ...style,
-                }}
-            />
+            {scannerOpen && (
+                <div
+                    id="reader"
+                    style={{
+                        width: "100%",
+                        maxWidth: qrboxSize,
+                        aspectRatio: "2 / 1",
+                        border: "1px solid #ccc",
+                        margin: "0 auto",
+                        ...style,
+                    }}
+                />
+            )}
         </div>
     );
 }

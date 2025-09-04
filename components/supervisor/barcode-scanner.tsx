@@ -1,77 +1,80 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { ScanResult } from "@/actions/actions"
-import BarcodeScanner from "@/components/BarCode"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { User, CheckCircle, XCircle, Clock } from "lucide-react"
+import { useState } from "react";
+import { ScanResult } from "@/actions/actions";
+import BarcodeScanner from "@/components/BarCode";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { User, Clock } from "lucide-react";
 
 type Props = {
-  scanEmployee: (empCode: string) => Promise<ScanResult>
-}
+  scanEmployee: (empCode: string) => Promise<ScanResult>;
+};
 
 export default function SupervisorBarcodeScanner({ scanEmployee }: Props) {
-  const [lastScannedEmployee, setLastScannedEmployee] = useState<ScanResult | null>(null)
-  const [scanTime, setScanTime] = useState<Date | null>(null)
-  const [message, setMessage] = useState("Ready to scan employee barcode...")
-  const [messageType, setMessageType] = useState<"success" | "error" | "info">("info")
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [manualInput, setManualInput] = useState("")
-  const [showPopup, setShowPopup] = useState(false)
+  const [lastScannedEmployee, setLastScannedEmployee] = useState<ScanResult | null>(null);
+  const [scanTime, setScanTime] = useState<Date | null>(null);
+  const [message, setMessage] = useState("Ready to scan employee barcode...");
+  const [messageType, setMessageType] = useState<"success" | "error" | "info">("info");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [manualInput, setManualInput] = useState("");
+  const [showPopup, setShowPopup] = useState(false);
+  const [scannerOpenTriggerCount, setScannerOpenTriggerCount] = useState(0); // repeated trigger
 
   const playSound = (type: "success" | "error") => {
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
-      const osc = audioContext.createOscillator()
-      const gainNode = audioContext.createGain()
-      osc.connect(gainNode)
-      gainNode.connect(audioContext.destination)
-      osc.frequency.value = type === "success" ? 800 : 300
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
-      osc.type = "sine"
-      osc.start(audioContext.currentTime)
-      osc.stop(audioContext.currentTime + 0.5)
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      osc.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      osc.frequency.value = type === "success" ? 800 : 300;
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      osc.type = "sine";
+      osc.start(audioContext.currentTime);
+      osc.stop(audioContext.currentTime + 0.5);
     } catch {
-      console.warn("Audio not supported")
+      console.warn("Audio not supported");
     }
-  }
+  };
 
   const handleScan = async (empCode: string) => {
-    if (!empCode.trim() || isProcessing) return
-    setIsProcessing(true)
+    if (!empCode.trim() || isProcessing) return;
+    setIsProcessing(true);
     try {
-      const result = await scanEmployee(empCode)
-      setLastScannedEmployee(result)
-      const now = new Date()
-      setScanTime(now)
+      const result = await scanEmployee(empCode);
+      setLastScannedEmployee(result);
+      const now = new Date();
+      setScanTime(now);
       setMessage(
         `✅ Employee ${result.employeeName} (Code: ${result.empCode}) CHECKED ${result.lastScanType?.toUpperCase()} at ${now.toLocaleTimeString()}`
-      )
-      setMessageType("success")
-      playSound("success")
-      setShowPopup(true) // show the popup when scanned
+      );
+      setMessageType("success");
+      playSound("success");
+      setShowPopup(true);
     } catch (err: any) {
-      console.error(err)
-      setMessage(`❌ ${err.message}`)
-      setMessageType("error")
-      playSound("error")
-      setShowPopup(true) // show error popup
+      console.error(err);
+      setMessage(`❌ ${err.message}`);
+      setMessageType("error");
+      playSound("error");
+      setShowPopup(true);
     } finally {
-      setIsProcessing(false)
-      setManualInput("")
+      setIsProcessing(false);
+      setManualInput("");
     }
-  }
+  };
 
   const handleManualSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    handleScan(manualInput)
-  }
+    e.preventDefault();
+    handleScan(manualInput);
+  };
 
   const closePopup = () => {
-    setShowPopup(false)
-    setLastScannedEmployee(null)
-  }
+    setShowPopup(false);
+    setLastScannedEmployee(null);
+    // increment trigger counter to reopen scanner every time
+    setScannerOpenTriggerCount(prev => prev + 1);
+  };
 
   return (
     <div className="flex flex-col items-center justify-center space-y-6 px-4 py-4 max-w-lg mx-auto relative">
@@ -84,6 +87,7 @@ export default function SupervisorBarcodeScanner({ scanEmployee }: Props) {
           fps={10}
           qrboxSize={300}
           style={{ margin: "0 auto", maxWidth: "100%" }}
+          openTriggerCount={scannerOpenTriggerCount} // repeated reopen
         />
       </Card>
 
@@ -112,7 +116,7 @@ export default function SupervisorBarcodeScanner({ scanEmployee }: Props) {
         >
           <Card
             className="max-w-md w-full border-2 border-green-200 bg-green-50 cursor-pointer"
-            onClick={(e) => e.stopPropagation()} // prevent closing if clicked inside card
+            onClick={(e) => e.stopPropagation()}
           >
             <CardContent>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -146,5 +150,5 @@ export default function SupervisorBarcodeScanner({ scanEmployee }: Props) {
         </div>
       )}
     </div>
-  )
+  );
 }
