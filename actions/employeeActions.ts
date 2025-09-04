@@ -72,7 +72,7 @@ export async function getEmployees(): Promise<ActionResponse<IEmployee[]>> {
     try {
         await connect();
 
-        const employees = await Employee.find().populate("departmentId");
+        const employees = await Employee.find();
 
         return {
             success: true,
@@ -102,7 +102,7 @@ export async function getEmployeeById(id: string): Promise<ActionResponse<IEmplo
             return { success: false, message: "Invalid employee ID" };
         }
 
-        const employee = await Employee.findById(id).populate("departmentId");
+        const employee = await Employee.findById(id);
         if (!employee) {
             return { success: false, message: "Employee not found" };
         }
