@@ -18,7 +18,7 @@ export default function ZXingPhotoScanner() {
             .then((videoDevices) => {
                 setDevices(videoDevices);
                 if (videoDevices.length > 0) {
-                    setSelectedDeviceId(videoDevices[0].deviceId); // default first
+                    setSelectedDeviceId(videoDevices[0].deviceId); // default first camera
                 }
             })
             .catch((err) => console.error("Device error:", err));
@@ -35,8 +35,15 @@ export default function ZXingPhotoScanner() {
             if (videoRef.current) {
                 videoRef.current.srcObject = stream;
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error("Camera error:", err);
+            if (err.name === "NotAllowedError") {
+                alert("Camera permission denied. Please allow camera access.");
+            } else if (err.name === "NotFoundError") {
+                alert("No camera device found.");
+            } else {
+                alert("Camera error: " + err.message);
+            }
         }
     };
 
@@ -99,6 +106,8 @@ export default function ZXingPhotoScanner() {
                     <video
                         ref={videoRef}
                         autoPlay
+                        playsInline
+                        muted
                         className="w-80 border rounded-lg shadow"
                     />
                     <div className="flex gap-2">
