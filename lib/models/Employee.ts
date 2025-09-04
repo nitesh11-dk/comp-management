@@ -18,18 +18,29 @@ const EmployeeSchema = new Schema<IEmployee>(
     {
         name: { type: String, required: true },
         empCode: { type: String, required: true, unique: true },
-        pfId: { type: String },
-        esicId: { type: String },
+
+        // ✅ Unique PF and ESIC IDs
+        pfId: { type: String, unique: true, sparse: true },
+        esicId: { type: String, unique: true, sparse: true },
+
         aadhaarNumber: { type: String, required: true, unique: true },
         mobile: { type: String, required: true },
-        departmentId: { type: Schema.Types.ObjectId, ref: "Department", required: true },
+
+        departmentId: {
+            type: Schema.Types.ObjectId,
+            ref: "Department",
+            required: true,
+        },
         shiftType: { type: String, required: true },
+
         barcodeId: { type: String, required: true, unique: true },
         hourlyRate: { type: Number, required: true },
+
         profileComplete: { type: Boolean, default: false },
     },
     { timestamps: true }
 );
 
+// Export model safely
 export default mongoose.models.Employee ||
     mongoose.model<IEmployee>("Employee", EmployeeSchema);

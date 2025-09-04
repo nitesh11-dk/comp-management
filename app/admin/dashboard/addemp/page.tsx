@@ -1,43 +1,72 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { dataStore } from "../../../../lib/data-store"
+import { toast } from "sonner"
+
+import { createEmployee } from "@/actions/employeeActions"
+import { getDepartments } from "@/actions/department"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { UserPlus, Download, Trash2, ArrowLeft } from "lucide-react"
+
+import { UserPlus, Download, Trash2 } from "lucide-react"
 import Barcode from "react-barcode"
 import html2canvas from "html2canvas"
 
 export default function AddEmployeePage() {
   const router = useRouter()
+
+  // 🔹 Form state
   const [formData, setFormData] = useState({
     name: "",
     aadhaarNumber: "",
     mobile: "",
     departmentId: "",
     shiftType: "",
+    pfId: "",
+    esicId: "",
+    hourlyRate: "", // added hourly rate
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // 🔹 Departments state
+  const [departments, setDepartments] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // 🔹 Messages and generated employee
   const [message, setMessage] = useState("")
   const [messageType, setMessageType] = useState<"success" | "error">("success")
   const [generatedEmployee, setGeneratedEmployee] = useState<any>(null)
+
   const barcodeRef = useRef<HTMLDivElement>(null)
 
-  const departments = dataStore.getDepartments()
-  const shifts = dataStore.getShifts()
+  // 🔹 Fetch departments on mount
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const res = await getDepartments()
+        if (res.success) {
+          setDepartments(res.data || [])
+        } else {
+          toast.error(res.message || "⚠️ Failed to load departments")
+        }
+      } catch (err) {
+        console.error("Error fetching departments:", err)
+        toast.error("🚨 Error fetching departments")
+      } finally {
+        setLoading(false)
+      }
+    }
 
-  const generateEmpCode = () => {
-    const randomNum = Math.floor(Math.random() * 9000) + 1000
-    return `EMP${randomNum}`
-  }
+    fetchDepartments()
+  }, [])
 
+  // 🔹 Download barcode
   const downloadBarcode = async (empCode: string) => {
     if (!barcodeRef.current) return
 
@@ -56,33 +85,44 @@ export default function AddEmployeePage() {
     }
   }
 
+  // 🔹 Handle form submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
 
     try {
-      // Generate empCode and barcodeId
-      const empCode = generateEmpCode()
-      const barcodeId = `${empCode}BARCODE`
-
-      const newEmployee = {
+      const res = await createEmployee({
         ...formData,
-        empCode,
-        barcodeId,
-        hourlyRate: 100, // Default hourly rate
-        profileComplete: true,
+        hourlyRate: Number(formData.hourlyRate), // convert to number
+      })
+
+      if (res.success && res.data) {
+        setGeneratedEmployee(res.data)
+        setMessage(`Employee ${res.data.name} added successfully! Employee Code: ${res.data.empCode}`)
+        setMessageType("success")
+
+        // Auto-download barcode
+        setTimeout(() => {
+          downloadBarcode(res.data.empCode)
+        }, 500)
+
+        // Clear form after success
+        setFormData({
+          name: "",
+          aadhaarNumber: "",
+          mobile: "",
+          departmentId: "",
+          shiftType: "",
+          pfId: "",
+          esicId: "",
+          hourlyRate: "",
+        })
+      } else {
+        setMessage(res.message || "Error adding employee")
+        setMessageType("error")
       }
-
-      const createdEmployee = dataStore.addEmployee(newEmployee)
-      setGeneratedEmployee(createdEmployee)
-      setMessage(`Employee ${createdEmployee.name} added successfully! Employee Code: ${empCode}`)
-      setMessageType("success")
-
-      // Auto-download barcode after a short delay to ensure rendering
-      setTimeout(() => {
-        downloadBarcode(empCode)
-      }, 500)
     } catch (error) {
+      console.error("❌ Error adding employee:", error)
       setMessage("Error adding employee. Please try again.")
       setMessageType("error")
     } finally {
@@ -90,6 +130,7 @@ export default function AddEmployeePage() {
     }
   }
 
+  // 🔹 Clear form
   const handleClear = () => {
     setFormData({
       name: "",
@@ -97,6 +138,9 @@ export default function AddEmployeePage() {
       mobile: "",
       departmentId: "",
       shiftType: "",
+      pfId: "",
+      esicId: "",
+      hourlyRate: "",
     })
     setGeneratedEmployee(null)
     setMessage("")
@@ -107,10 +151,6 @@ export default function AddEmployeePage() {
       <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          <Button variant="outline" onClick={() => router.push("/")} size="sm">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
-          </Button>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold">Add New Employee</h1>
             <p className="text-sm sm:text-base text-muted-foreground">Fill in the employee details below</p>
@@ -162,17 +202,37 @@ export default function AddEmployeePage() {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="pfId">PF ID (Optional)</Label>
+                  <Input
+                    id="pfId"
+                    value={formData.pfId}
+                    onChange={(e) => setFormData({ ...formData, pfId: e.target.value })}
+                    placeholder="Enter PF ID"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="esicId">ESIC ID (Optional)</Label>
+                  <Input
+                    id="esicId"
+                    value={formData.esicId}
+                    onChange={(e) => setFormData({ ...formData, esicId: e.target.value })}
+                    placeholder="Enter ESIC ID"
+                  />
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="departmentId">Department *</Label>
                   <Select
                     value={formData.departmentId}
                     onValueChange={(value) => setFormData({ ...formData, departmentId: value })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select Department" />
+                      <SelectValue placeholder={loading ? "Loading..." : "Select Department"} />
                     </SelectTrigger>
                     <SelectContent>
                       {departments.map((dept) => (
-                        <SelectItem key={dept.id} value={dept.id}>
+                        <SelectItem key={dept._id} value={dept._id}>
                           {dept.name}
                         </SelectItem>
                       ))}
@@ -190,13 +250,23 @@ export default function AddEmployeePage() {
                       <SelectValue placeholder="Select Shift" />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.entries(shifts).map(([key, shift]) => (
-                        <SelectItem key={key} value={key}>
-                          {shift.name} ({shift.hours}h)
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="day">Day Shift (8h)</SelectItem>
+                      <SelectItem value="night">Night Shift (8h)</SelectItem>
+                      <SelectItem value="flexible">Flexible Shift</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="hourlyRate">Hourly Rate (₹) *</Label>
+                  <Input
+                    id="hourlyRate"
+                    type="number"
+                    value={formData.hourlyRate}
+                    onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
+                    placeholder="Enter hourly rate"
+                    required
+                  />
                 </div>
 
                 {message && (
@@ -226,33 +296,35 @@ export default function AddEmployeePage() {
               </CardHeader>
               <CardContent className="space-y-3 sm:space-y-4">
                 <div className="space-y-2">
-                  <p className="text-sm sm:text-base">
-                    <strong>Name:</strong> {generatedEmployee.name}
-                  </p>
-                  <p className="text-sm sm:text-base">
-                    <strong>Employee Code:</strong> {generatedEmployee.empCode}
-                  </p>
-                  <p className="text-sm sm:text-base">
+                  <p><strong>Name:</strong> {generatedEmployee.name}</p>
+                  <p><strong>Employee Code:</strong> {generatedEmployee.empCode}</p>
+                  <p>
                     <strong>Department:</strong>{" "}
-                    {departments.find((d) => d.id === generatedEmployee.departmentId)?.name}
+                    {departments.find((d) => d._id === generatedEmployee.departmentId)?.name}
                   </p>
+                  {generatedEmployee.pfId && <p><strong>PF ID:</strong> {generatedEmployee.pfId}</p>}
+                  {generatedEmployee.esicId && <p><strong>ESIC ID:</strong> {generatedEmployee.esicId}</p>}
+                  <p><strong>Hourly Rate:</strong> ₹{generatedEmployee.hourlyRate}</p>
                 </div>
 
                 <div className="text-center space-y-3 sm:space-y-4">
                   <div className="bg-white p-3 sm:p-4 rounded-lg inline-block" ref={barcodeRef}>
                     <Barcode
-                      value={generatedEmployee.empCode}
+                      value={generatedEmployee.barcodeId}
+                      format="CODE128"
                       width={2}
-                      height={60}
-                      fontSize={14}
+                      height={100}
+                      fontSize={16}
+                      displayValue={true}
                       background="#ffffff"
                       lineColor="#000000"
+                      margin={10}
                     />
                   </div>
 
                   <div className="space-y-2">
                     <Button
-                      onClick={() => downloadBarcode(generatedEmployee.empCode)}
+                      onClick={() => downloadBarcode(generatedEmployee.barcodeId)}
                       variant="outline"
                       className="w-full"
                     >
