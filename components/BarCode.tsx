@@ -72,6 +72,7 @@ export default function BarcodeScanner({
                         // Close scanner after one scan
                         setScannerOpen(false);
 
+                        // Reset last scanned internally after short delay
                         setTimeout(() => (lastScannedRef.current = null), 1500);
                     }
                 },

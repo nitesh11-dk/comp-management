@@ -80,6 +80,13 @@ export default function SupervisorBarcodeScanner({ scanEmployee }: Props) {
     <div className="flex flex-col items-center justify-center space-y-6 px-4 py-4 max-w-lg mx-auto relative">
       <h2 className="text-2xl sm:text-3xl font-bold text-center">Supervisor Attendance Scanner</h2>
 
+      {/* Loader */}
+      {isProcessing && (
+        <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-40">
+          <div className="w-16 h-16 border-4 border-blue-500 border-dashed rounded-full animate-spin"></div>
+        </div>
+      )}
+
       {/* Camera scanner */}
       <Card className="w-full border p-2 rounded">
         <BarcodeScanner
