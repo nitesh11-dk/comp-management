@@ -1,167 +1,84 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
-import { BrowserMultiFormatReader } from "@zxing/browser";
+import { useEffect, useRef, useState } from "react";
+import Quagga from "@ericblade/quagga2";
 
-export default function ZXingPhotoScanner() {
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const canvasRef = useRef<HTMLCanvasElement>(null);
+export default function BarcodeScanner({ onDetected }: { onDetected: (code: string) => void }) {
+    const scannerRef = useRef<HTMLDivElement>(null);
+    const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
+    const [selectedCam, setSelectedCam] = useState<string>("");
 
-    const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
-    const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
-    const [capturedImage, setCapturedImage] = useState<string | null>(null);
-    const [result, setResult] = useState<string>("");
-
-    // List cameras on mount
+    // Get available cameras on mount
     useEffect(() => {
-        BrowserMultiFormatReader.listVideoInputDevices()
-            .then((videoDevices) => {
-                setDevices(videoDevices);
-                if (videoDevices.length > 0) {
-                    setSelectedDeviceId(videoDevices[0].deviceId); // default first camera
+        Quagga.CameraAccess.enumerateVideoDevices()
+            .then((devices) => {
+                setCameras(devices);
+                if (devices.length > 0) {
+                    setSelectedCam(devices[0].deviceId); // default to first camera
                 }
             })
-            .catch((err) => console.error("Device error:", err));
+            .catch((err) => console.error("Camera enum error:", err));
     }, []);
 
-    // Start camera
-    const startCamera = async () => {
-        if (!selectedDeviceId) return;
+    // Initialize scanner whenever selectedCam changes
+    useEffect(() => {
+        if (!scannerRef.current || !selectedCam) return;
 
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: { deviceId: { exact: selectedDeviceId } },
-            });
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-            }
-        } catch (err: any) {
-            console.error("Camera error:", err);
-            if (err.name === "NotAllowedError") {
-                alert("Camera permission denied. Please allow camera access.");
-            } else if (err.name === "NotFoundError") {
-                alert("No camera device found.");
-            } else {
-                alert("Camera error: " + err.message);
-            }
-        }
-    };
-
-    // Capture photo from video
-    const capturePhoto = () => {
-        if (videoRef.current && canvasRef.current) {
-            const context = canvasRef.current.getContext("2d");
-            if (context) {
-                canvasRef.current.width = videoRef.current.videoWidth;
-                canvasRef.current.height = videoRef.current.videoHeight;
-                context.drawImage(videoRef.current, 0, 0);
-                const imgData = canvasRef.current.toDataURL("image/png");
-                setCapturedImage(imgData);
-
-                // Stop video stream after capture
-                const stream = videoRef.current.srcObject as MediaStream;
-                if (stream) {
-                    stream.getTracks().forEach((track) => track.stop());
+        Quagga.init(
+            {
+                inputStream: {
+                    type: "LiveStream",
+                    target: scannerRef.current,
+                    constraints: {
+                        deviceId: selectedCam, // use selected camera
+                    },
+                },
+                decoder: {
+                    readers: ["code_128_reader", "ean_reader", "ean_8_reader"], // barcode formats
+                },
+            },
+            (err) => {
+                if (err) {
+                    console.error("Quagga init error:", err);
+                    return;
                 }
+                Quagga.start();
             }
-        }
-    };
+        );
 
-    // Scan captured photo
-    const scanPhoto = async () => {
-        if (capturedImage) {
-            try {
-                const reader = new BrowserMultiFormatReader();
-                const res = await reader.decodeFromImageUrl(capturedImage);
-                setResult(res.getText());
-            } catch (err) {
-                console.error("Scan failed:", err);
-                setResult("No barcode/QR code detected.");
+        Quagga.onDetected((result) => {
+            if (result?.codeResult?.code) {
+                onDetected(result.codeResult.code);
+                Quagga.stop();
             }
-        }
-    };
+        });
+
+        return () => {
+            Quagga.stop();
+            Quagga.offDetected(() => { });
+        };
+    }, [selectedCam, onDetected]);
 
     return (
-        <div className="p-4 flex flex-col items-center gap-4">
+        <div>
             {/* Camera Selector */}
-            {!capturedImage && (
-                <div>
-                    <label className="mr-2">Select Camera: </label>
-                    <select
-                        value={selectedDeviceId}
-                        onChange={(e) => setSelectedDeviceId(e.target.value)}
-                    >
-                        {devices.map((d, i) => (
-                            <option key={i} value={d.deviceId}>
-                                {d.label || `Camera ${i + 1}`}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-            )}
+            <div className="mb-2">
+                <label className="font-medium mr-2">Choose Camera:</label>
+                <select
+                    value={selectedCam}
+                    onChange={(e) => setSelectedCam(e.target.value)}
+                    className="border rounded p-1"
+                >
+                    {cameras.map((cam, idx) => (
+                        <option key={cam.deviceId} value={cam.deviceId}>
+                            {cam.label || `Camera ${idx + 1}`}
+                        </option>
+                    ))}
+                </select>
+            </div>
 
-            {/* Video stream */}
-            {!capturedImage && (
-                <>
-                    <video
-                        ref={videoRef}
-                        autoPlay
-                        playsInline
-                        muted
-                        className="w-80 border rounded-lg shadow"
-                    />
-                    <div className="flex gap-2">
-                        <button
-                            onClick={startCamera}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg"
-                        >
-                            Start Camera
-                        </button>
-                        <button
-                            onClick={capturePhoto}
-                            className="px-4 py-2 bg-green-600 text-white rounded-lg"
-                        >
-                            Capture Photo
-                        </button>
-                    </div>
-                </>
-            )}
-
-            {/* Captured image preview */}
-            {capturedImage && (
-                <>
-                    <img
-                        src={capturedImage}
-                        alt="Captured"
-                        className="w-80 border rounded-lg shadow"
-                    />
-                    <div className="flex gap-2">
-                        <button
-                            onClick={scanPhoto}
-                            className="px-4 py-2 bg-purple-600 text-white rounded-lg"
-                        >
-                            Scan Captured Photo
-                        </button>
-                        <button
-                            onClick={() => {
-                                setCapturedImage(null);
-                                setResult("");
-                            }}
-                            className="px-4 py-2 bg-gray-600 text-white rounded-lg"
-                        >
-                            Retake
-                        </button>
-                    </div>
-                </>
-            )}
-
-            {/* Hidden canvas for photo capture */}
-            <canvas ref={canvasRef} className="hidden"></canvas>
-
-            {/* Result */}
-            <p className="mt-4 text-lg font-semibold">
-                {result ? `Result: ${result}` : "No scan result yet"}
-            </p>
+            {/* Scanner */}
+            <div ref={scannerRef} style={{ width: "100%", height: "400px" }} />
         </div>
     );
 }
