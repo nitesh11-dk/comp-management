@@ -1,8 +1,8 @@
 "use server";
 
 import AttendanceWallet, { IAttendanceWallet } from "@/lib/models/EmployeeAttendanceWallet";
-import Employee from "@/lib/models/Employee";
-import Department from "@/lib/models/Department";
+import Employee, { IEmployee } from "@/lib/models/Employee";
+import Department, { IDepartment } from "@/lib/models/Department";
 import { getUserFromCookies } from "@/lib/auth";
 import mongoose from "mongoose";
 
@@ -21,38 +21,35 @@ export async function getSupervisorScans(): Promise<SupervisorScanLog[]> {
     const supervisor = await getUserFromCookies();
     if (!supervisor) throw new Error("Unauthorized");
 
-    // 🔹 Fetch all AttendanceWallets that have entries scanned by this supervisor
+    const supervisorId = new mongoose.Types.ObjectId(supervisor.id);
+
+    // 🔹 Fetch all AttendanceWallets with entries scanned by this supervisor
     const wallets: IAttendanceWallet[] = await AttendanceWallet.find({
-        "entries.scannedBy": new mongoose.Types.ObjectId(supervisor.id),
+        "entries.scannedBy": supervisorId,
     })
-        .populate({
-            path: "employeeId",
-            select: "name",
-            model: Employee,
-        })
-        .populate({
-            path: "entries.departmentId",
-            select: "name",
-            model: Department,
-        })
+        .populate<{ employeeId: IEmployee }>("employeeId", "name")
+        .populate<{ "entries.departmentId": IDepartment }>("entries.departmentId", "name")
         .exec();
 
-    // 🔹 Flatten entries for this supervisor
     const logs: SupervisorScanLog[] = [];
 
+    // 🔹 Flatten entries scanned by this supervisor
     wallets.forEach((wallet) => {
+        const employee = wallet.employeeId as IEmployee;
         wallet.entries.forEach((entry) => {
-            if (entry.scannedBy.toString() === supervisor.id) {
-                logs.push({
-                    employeeId: wallet.employeeId._id.toString(),
-                    employeeName: (wallet.employeeId as any).name || "Unknown",
-                    departmentId: (entry.departmentId as any)?._id?.toString() || "",
-                    departmentName: (entry.departmentId as any)?.name || "Unknown",
-                    scanType: entry.scanType,
-                    timestamp: entry.timestamp,
-                    autoClosed: entry.autoClosed,
-                });
-            }
+            if (entry.scannedBy.toString() !== supervisor.id) return;
+
+            const department = entry.departmentId as IDepartment | null;
+
+            logs.push({
+                employeeId: employee?._id.toString() || "",
+                employeeName: employee?.name || "Unknown",
+                departmentId: department?._id?.toString() || "",
+                departmentName: department?.name || "Unknown",
+                scanType: entry.scanType,
+                timestamp: entry.timestamp,
+                autoClosed: entry.autoClosed,
+            });
         });
     });
 

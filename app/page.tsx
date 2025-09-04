@@ -15,7 +15,7 @@ export default function HomePage() {
           ✅ Detected: <strong>{code}</strong>
         </div>
       ) : (
-        <BarcodeScanner onDetected={(c) => setCode(c)} />
+        <BarcodeScanner />
       )}
     </div>
   );

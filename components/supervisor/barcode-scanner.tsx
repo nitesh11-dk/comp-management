@@ -2,23 +2,22 @@
 
 import { useState } from "react"
 import { ScanResult } from "@/actions/actions"
-import BarcodeScanner from "../barcode-scanner"
+import BarcodeScanner from "@/components/BarCode" // reusable scanner
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Scan, User, CheckCircle, XCircle, Clock } from "lucide-react"
+import { User, CheckCircle, XCircle, Clock } from "lucide-react"
 
 type Props = {
-  scanEmployee: (employeeId: string) => Promise<ScanResult>
+  scanEmployee: (empCode: string) => Promise<ScanResult>
 }
 
 export default function SupervisorBarcodeScanner({ scanEmployee }: Props) {
   const [lastScannedEmployee, setLastScannedEmployee] = useState<ScanResult | null>(null)
   const [scanTime, setScanTime] = useState<Date | null>(null)
   const [message, setMessage] = useState("Ready to scan employee barcode...")
-  const [messageType, setMessageType] = useState<"success" | "error" | "info" | "warning">("info")
+  const [messageType, setMessageType] = useState<"success" | "error" | "info">("info")
   const [isProcessing, setIsProcessing] = useState(false)
-  const [isScannerActive, setIsScannerActive] = useState(false)
   const [manualInput, setManualInput] = useState("")
 
   const playSound = (type: "success" | "error") => {
@@ -33,16 +32,16 @@ export default function SupervisorBarcodeScanner({ scanEmployee }: Props) {
       osc.type = "sine"
       osc.start(audioContext.currentTime)
       osc.stop(audioContext.currentTime + 0.5)
-    } catch { console.warn("Audio not supported") }
+    } catch {
+      console.warn("Audio not supported")
+    }
   }
 
-  console.log("working ");
-  const handleScan = async (employeeId: string) => {
-    if (!employeeId.trim() || isProcessing) return
-    console.log(employeeId);
+  const handleScan = async (empCode: string) => {
+    if (!empCode.trim() || isProcessing) return
     setIsProcessing(true)
     try {
-      const result = await scanEmployee(employeeId)
+      const result = await scanEmployee(empCode)
       setLastScannedEmployee(result)
       const now = new Date()
       setScanTime(now)
@@ -65,31 +64,23 @@ export default function SupervisorBarcodeScanner({ scanEmployee }: Props) {
     handleScan(manualInput)
   }
 
-  const toggleScanner = () => setIsScannerActive(!isScannerActive)
-
   return (
-    <div className="space-y-4">
-      <h2 className="text-2xl font-bold text-center">Supervisor Attendance Scanner</h2>
+    <div className="flex flex-col items-center justify-center space-y-6 px-2 sm:px-4 py-4 max-w-lg mx-auto">
+      <h2 className="text-2xl sm:text-3xl font-bold text-center">Supervisor Attendance Scanner</h2>
 
-      <Card className="border-2 border-dashed border-primary">
-        <CardContent>
-          <div className="text-center space-y-3">
-            <div className="flex justify-center">
-              <div className={`p-3 rounded-full ${isProcessing ? "bg-yellow-100" : "bg-primary/10"}`}>
-                <Scan className="h-6 w-6 text-primary animate-pulse" />
-              </div>
-            </div>
-
+      <Card className="w-full border-2 border-dashed border-primary">
+        <CardContent className="space-y-4">
+          <div className="w-full text-center">
             <Alert variant={messageType === "error" ? "destructive" : "default"}>
-              <div className="flex items-start gap-2">
-                {messageType === "success" && <CheckCircle className="h-4 w-4 mt-0.5" />}
-                {messageType === "error" && <XCircle className="h-4 w-4 mt-0.5" />}
+              <div className="flex items-start justify-center gap-2">
+                {messageType === "success" && <CheckCircle className="h-5 w-5 mt-0.5" />}
+                {messageType === "error" && <XCircle className="h-5 w-5 mt-0.5" />}
                 <AlertDescription>{message}</AlertDescription>
               </div>
             </Alert>
 
             {lastScannedEmployee && (
-              <Card className="border-2 border-green-200 bg-green-50">
+              <Card className="border-2 border-green-200 bg-green-50 mt-4">
                 <CardContent>
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                     <div className="p-2 rounded-full bg-green-100">
@@ -98,7 +89,7 @@ export default function SupervisorBarcodeScanner({ scanEmployee }: Props) {
                     <div className="text-center sm:text-left">
                       <h4 className="font-bold text-lg">{lastScannedEmployee.employeeName}</h4>
                       <p className="text-sm text-gray-500">ID: {lastScannedEmployee.employeeId}</p>
-                      <div className="flex items-center justify-center sm:justify-start gap-2 mt-1">
+                      <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 mt-1">
                         <Badge variant="default">
                           {lastScannedEmployee.lastScanType === "out" ? "Checked OUT" : "Currently IN"}
                         </Badge>
@@ -118,14 +109,32 @@ export default function SupervisorBarcodeScanner({ scanEmployee }: Props) {
         </CardContent>
       </Card>
 
-      {/* Barcode Scanner */}
-      <div className="space-y-2">
+      {/* Camera scanner */}
+      <Card className="w-full border p-2 rounded">
         <BarcodeScanner
           onScan={handleScan}
-          isActive={isScannerActive}
-          onToggle={toggleScanner}
+          fps={10}
+          qrboxSize={300}
+          style={{ margin: "0 auto" }}
         />
-      </div>
+      </Card>
+
+      {/* Manual empCode input */}
+      <form onSubmit={handleManualSubmit} className="w-full flex flex-col sm:flex-row gap-2 mt-2">
+        <input
+          type="text"
+          placeholder="Enter EmpCode manually"
+          className="border rounded px-3 py-2 flex-1 text-center sm:text-left"
+          value={manualInput}
+          onChange={(e) => setManualInput(e.target.value.toUpperCase())}
+        />
+        <button
+          type="submit"
+          className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
+        >
+          Submit
+        </button>
+      </form>
     </div>
   )
 }

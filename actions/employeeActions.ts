@@ -13,8 +13,15 @@ export async function createEmployee(
     try {
         await connect();
 
-        // 🔹 Check uniqueness of Aadhaar, PF, ESIC manually
+        // 🔹 Validate Aadhaar number (must be 12-digit number)
         if (data.aadhaarNumber) {
+            if (!/^\d{12}$/.test(data.aadhaarNumber.toString())) {
+                return {
+                    success: false,
+                    message: "⚠️ Aadhaar number must be a 12-digit number",
+                };
+            }
+
             const aadhaarExists = await Employee.findOne({ aadhaarNumber: data.aadhaarNumber });
             if (aadhaarExists) {
                 return {
@@ -24,6 +31,7 @@ export async function createEmployee(
             }
         }
 
+        // 🔹 Validate PF ID uniqueness
         if (data.pfId) {
             const pfExists = await Employee.findOne({ pfId: data.pfId });
             if (pfExists) {
@@ -34,6 +42,7 @@ export async function createEmployee(
             }
         }
 
+        // 🔹 Validate ESIC ID uniqueness
         if (data.esicId) {
             const esicExists = await Employee.findOne({ esicId: data.esicId });
             if (esicExists) {
@@ -44,10 +53,41 @@ export async function createEmployee(
             }
         }
 
+        // 🔹 Validate Mobile number (must be 10-digit number)
+        if (data.mobile) {
+            if (!/^\d{10}$/.test(data.mobile.toString())) {
+                return {
+                    success: false,
+                    message: "⚠️ Mobile number must be a 10-digit number",
+                };
+            }
+        }
+
+        // 🔹 Generate unique empCode
+        async function generateUniqueEmpCode(): Promise<string> {
+            const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            let code = "";
+            let exists = true;
+
+            while (exists) {
+                code = Array.from({ length: 8 }, () =>
+                    chars.charAt(Math.floor(Math.random() * chars.length))
+                ).join("");
+
+                const existing = await Employee.findOne({ empCode: code });
+                exists = !!existing;
+            }
+
+            return code;
+        }
+
+        const empCode = await generateUniqueEmpCode();
+
         // 🔹 Create employee
         const employee = await Employee.create({
             ...data,
-            hourlyRate: data.hourlyRate ?? 100, // default
+            empCode, // auto-generated unique code
+            hourlyRate: data.hourlyRate ?? 100, // default if not provided
             profileComplete: true,
         });
 
@@ -64,7 +104,6 @@ export async function createEmployee(
         };
     }
 }
-
 
 
 // 🔹 Get All Employees

@@ -58,12 +58,12 @@ export default function AddEmployeePage() {
     fetchDepartments()
   }, [])
 
-  const downloadBarcode = async (employeeId: string) => {
+  const downloadBarcode = async (empCode: string) => {
     if (!barcodeRef.current) return
     try {
       const canvas = await html2canvas(barcodeRef.current, { backgroundColor: "#ffffff", scale: 2 })
       const link = document.createElement("a")
-      link.download = `employee_${employeeId}_barcode.png`
+      link.download = `employee_${empCode}_barcode.png`
       link.href = canvas.toDataURL("image/png")
       link.click()
     } catch (error) {
@@ -78,7 +78,7 @@ export default function AddEmployeePage() {
     try {
       const res = await createEmployee({
         ...formData,
-        hourlyRate: Number(formData.hourlyRate),
+        hourlyRate: formData.hourlyRate ? Number(formData.hourlyRate) : undefined,
       })
 
       if (res.success && res.data) {
@@ -86,8 +86,8 @@ export default function AddEmployeePage() {
         setMessage(`Employee ${res.data.name} added successfully!`)
         setMessageType("success")
 
-        // Auto-download barcode based on MongoDB _id
-        setTimeout(() => downloadBarcode(res.data._id), 500)
+        // Auto-download barcode based on empCode
+        setTimeout(() => downloadBarcode(res.data.empCode), 500)
 
         setFormData({
           name: "",
@@ -133,7 +133,9 @@ export default function AddEmployeePage() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold">Add New Employee</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">Fill in the employee details below</p>
+            <p className="text-sm sm:text-base text-muted-foreground">
+              Fill in the employee details below
+            </p>
           </div>
         </div>
 
@@ -152,7 +154,9 @@ export default function AddEmployeePage() {
                   <Input
                     id="name"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
                     placeholder="Enter full name"
                     required
                   />
@@ -163,9 +167,15 @@ export default function AddEmployeePage() {
                   <Label htmlFor="aadhaarNumber">Aadhaar Number *</Label>
                   <Input
                     id="aadhaarNumber"
+                    type="number"
                     value={formData.aadhaarNumber}
-                    onChange={(e) => setFormData({ ...formData, aadhaarNumber: e.target.value })}
-                    placeholder="1234-5678-9012"
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        aadhaarNumber: e.target.value.replace(/\D/g, ""),
+                      })
+                    }
+                    placeholder="123456789012"
                     required
                   />
                 </div>
@@ -175,8 +185,14 @@ export default function AddEmployeePage() {
                   <Label htmlFor="mobile">Mobile Number *</Label>
                   <Input
                     id="mobile"
+                    type="number"
                     value={formData.mobile}
-                    onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        mobile: e.target.value.replace(/\D/g, ""),
+                      })
+                    }
                     placeholder="9876543210"
                     required
                   />
@@ -188,7 +204,9 @@ export default function AddEmployeePage() {
                   <Input
                     id="pfId"
                     value={formData.pfId}
-                    onChange={(e) => setFormData({ ...formData, pfId: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, pfId: e.target.value })
+                    }
                     placeholder="Enter PF ID"
                   />
                 </div>
@@ -198,7 +216,9 @@ export default function AddEmployeePage() {
                   <Input
                     id="esicId"
                     value={formData.esicId}
-                    onChange={(e) => setFormData({ ...formData, esicId: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, esicId: e.target.value })
+                    }
                     placeholder="Enter ESIC ID"
                   />
                 </div>
@@ -208,10 +228,14 @@ export default function AddEmployeePage() {
                   <Label htmlFor="departmentId">Department *</Label>
                   <Select
                     value={formData.departmentId}
-                    onValueChange={(value) => setFormData({ ...formData, departmentId: value })}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, departmentId: value })
+                    }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder={loading ? "Loading..." : "Select Department"} />
+                      <SelectValue
+                        placeholder={loading ? "Loading..." : "Select Department"}
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       {departments.map((dept) => (
@@ -228,7 +252,9 @@ export default function AddEmployeePage() {
                   <Label htmlFor="shiftType">Shift Type *</Label>
                   <Select
                     value={formData.shiftType}
-                    onValueChange={(value) => setFormData({ ...formData, shiftType: value })}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, shiftType: value })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select Shift" />
@@ -248,14 +274,21 @@ export default function AddEmployeePage() {
                     id="hourlyRate"
                     type="number"
                     value={formData.hourlyRate}
-                    onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        hourlyRate: e.target.value.replace(/\D/g, ""),
+                      })
+                    }
                     placeholder="Enter hourly rate"
                     required
                   />
                 </div>
 
                 {message && (
-                  <Alert variant={messageType === "error" ? "destructive" : "default"}>
+                  <Alert
+                    variant={messageType === "error" ? "destructive" : "default"}
+                  >
                     <AlertDescription>{message}</AlertDescription>
                   </Alert>
                 )}
@@ -264,7 +297,12 @@ export default function AddEmployeePage() {
                   <Button type="submit" className="flex-1" disabled={isSubmitting}>
                     {isSubmitting ? "Adding Employee..." : "Add Employee"}
                   </Button>
-                  <Button type="button" variant="outline" onClick={handleClear} className="flex-1 sm:flex-none">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleClear}
+                    className="flex-1 sm:flex-none"
+                  >
                     <Trash2 className="h-4 w-4 mr-2" /> Clear
                   </Button>
                 </div>
@@ -272,27 +310,52 @@ export default function AddEmployeePage() {
             </CardContent>
           </Card>
 
-          {/* Barcode display based on MongoDB _id */}
+          {/* Barcode display based on empCode */}
           {generatedEmployee && (
             <Card className="border-2 border-green-200 bg-green-50">
               <CardHeader>
-                <CardTitle className="text-green-800 text-base sm:text-lg">Employee Added Successfully!</CardTitle>
+                <CardTitle className="text-green-800 text-base sm:text-lg">
+                  Employee Added Successfully!
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 sm:space-y-4">
                 <div className="space-y-2">
-                  <p><strong>Name:</strong> {generatedEmployee.name}</p>
-                  <p><strong>Department:</strong>{" "}
-                    {departments.find((d) => d._id === generatedEmployee.departmentId)?.name}
+                  <p>
+                    <strong>Name:</strong> {generatedEmployee.name}
                   </p>
-                  {generatedEmployee.pfId && <p><strong>PF ID:</strong> {generatedEmployee.pfId}</p>}
-                  {generatedEmployee.esicId && <p><strong>ESIC ID:</strong> {generatedEmployee.esicId}</p>}
-                  <p><strong>Hourly Rate:</strong> ₹{generatedEmployee.hourlyRate}</p>
+                  <p>
+                    <strong>Emp Code:</strong> {generatedEmployee.empCode}
+                  </p>
+                  <p>
+                    <strong>Department:</strong>{" "}
+                    {
+                      departments.find(
+                        (d) => d._id === generatedEmployee.departmentId
+                      )?.name
+                    }
+                  </p>
+                  {generatedEmployee.pfId && (
+                    <p>
+                      <strong>PF ID:</strong> {generatedEmployee.pfId}
+                    </p>
+                  )}
+                  {generatedEmployee.esicId && (
+                    <p>
+                      <strong>ESIC ID:</strong> {generatedEmployee.esicId}
+                    </p>
+                  )}
+                  <p>
+                    <strong>Hourly Rate:</strong> ₹{generatedEmployee.hourlyRate}
+                  </p>
                 </div>
 
                 <div className="text-center space-y-3 sm:space-y-4">
-                  <div className="bg-white p-3 sm:p-4 rounded-lg inline-block" ref={barcodeRef}>
+                  <div
+                    className="bg-white p-3 sm:p-4 rounded-lg inline-block"
+                    ref={barcodeRef}
+                  >
                     <Barcode
-                      value={generatedEmployee._id} // ✅ Use MongoDB _id for barcode
+                      value={generatedEmployee.empCode} // ✅ Use empCode for barcode
                       format="CODE128"
                       width={2}
                       height={100}
@@ -305,14 +368,15 @@ export default function AddEmployeePage() {
                   </div>
 
                   <Button
-                    onClick={() => downloadBarcode(generatedEmployee._id)}
+                    onClick={() => downloadBarcode(generatedEmployee.empCode)}
                     variant="outline"
                     className="w-full"
                   >
                     <Download className="h-4 w-4 mr-2" /> Download Barcode
                   </Button>
                   <p className="text-xs text-green-700">
-                    Barcode automatically generated from MongoDB _id. Use this for attendance scanning.
+                    Barcode automatically generated from Emp Code. Use this for
+                    attendance scanning.
                   </p>
                 </div>
               </CardContent>

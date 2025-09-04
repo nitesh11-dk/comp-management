@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import AttendanceWalletModel, { IAttendanceWallet } from "@/lib/models/EmployeeAttendanceWallet";
 import connect from "@/lib/mongo";
 import { getUserFromCookies } from "@/lib/auth";
+import Employee from "@/lib/models/Employee";
 
 export async function getEmployeeAttendance(employeeId: string) {
     await connect(); // ensure DB connection
@@ -10,70 +11,78 @@ export async function getEmployeeAttendance(employeeId: string) {
     return wallet;
 }
 
-
 export interface ScanAttendanceInput {
-    employeeId: mongoose.Types.ObjectId; // employee being scanned
+    empCode: string // ✅ ab sirf empCode milega
 }
 
 export interface ScanResult {
-    employeeId: mongoose.Types.ObjectId;
-    lastScanType: "in" | "out";
+    employeeId: mongoose.Types.ObjectId
+    lastScanType: "in" | "out"
 }
 
 export async function scanEmployee(input: ScanAttendanceInput): Promise<ScanResult> {
-    const user = await getUserFromCookies();
-    if (!user) throw new Error("Unauthorized");
+    const user = await getUserFromCookies()
+    if (!user) throw new Error("Unauthorized")
 
-    const { employeeId } = input;
+    const { empCode } = input
 
-    // 🔹 Validate ObjectId format
+    // 🔹 Employee find karo by empCode
+    const employee = await Employee.findOne({ empCode })
+    if (!employee) throw new Error("Employee not found")
+
+    const employeeId = employee._id
+
+    // 🔹 Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(employeeId)) {
-        throw new Error("Invalid employeeId");
+        throw new Error("Invalid employeeId")
     }
 
     // 🔹 Find or create wallet
-    let wallet = await AttendanceWalletModel.findOne({ employeeId });
+    let wallet = await AttendanceWalletModel.findOne({ employeeId })
     if (!wallet) {
-        wallet = new AttendanceWalletModel({ employeeId, entries: [], workLogs: [] });
+        wallet = new AttendanceWalletModel({ employeeId, entries: [], workLogs: [] })
     }
 
-    const now = new Date();
+    const now = new Date()
 
     // 🔹 Check last entry for this user's department
-    const lastEntry = [...wallet.entries]
-        .reverse()
-        .find((e) => e.departmentId.equals(user.departmentId));
+    const lastEntry = [...wallet.entries].reverse().find((e) => e.departmentId.equals(user.departmentId))
 
-    let newScanType: "in" | "out" = "in";
+    let newScanType: "in" | "out" = "in"
 
     if (!lastEntry || lastEntry.scanType === "out") {
-        newScanType = "in";
+        newScanType = "in"
     } else if (lastEntry.scanType === "in") {
-        newScanType = "out";
+        newScanType = "out"
     }
 
     // 🔹 Auto-close previous IN from other department if necessary
-    if (newScanType === "in" && lastEntry && lastEntry.scanType === "in" && !lastEntry.departmentId.equals(user.departmentId)) {
+    if (
+        newScanType === "in" &&
+        lastEntry &&
+        lastEntry.scanType === "in" &&
+        !lastEntry.departmentId.equals(user.departmentId)
+    ) {
         wallet.entries.push({
             timestamp: new Date(now.getTime() - 1000),
             scanType: "out",
             departmentId: lastEntry.departmentId,
             scannedBy: new mongoose.Types.ObjectId(user.id),
             autoClosed: true,
-        });
+        })
     }
 
-    // 🔹 Add new entry using user's department and id
+    // 🔹 Add new entry
     wallet.entries.push({
         timestamp: now,
         scanType: newScanType,
         departmentId: new mongoose.Types.ObjectId(user.departmentId),
         scannedBy: new mongoose.Types.ObjectId(user.id),
-    });
+    })
 
-    await wallet.save();
+    await wallet.save()
 
-    return { employeeId, lastScanType: newScanType };
+    return { employeeId, lastScanType: newScanType }
 }
 
 // ---------------------------
