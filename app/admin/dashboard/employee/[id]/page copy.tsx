@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { dataStore } from "../../../../lib/data-store"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -11,11 +10,14 @@ import { ArrowLeft, Download, Calendar, Clock, User, Building2 } from "lucide-re
 import Barcode from "react-barcode"
 import html2canvas from "html2canvas"
 import dayjs from "dayjs"
+import { getEmployeeById } from "@/actions/employeeActions" // your API to fetch employee by ID
+import { getDepartmentById } from "@/actions/department" // your API to fetch department by ID
 
 export default function EmployeeDetailPage() {
   const params = useParams()
   const router = useRouter()
   const [employee, setEmployee] = useState<any>(null)
+  const [department, setDepartment] = useState<any>(null)
   const [selectedMonth, setSelectedMonth] = useState(dayjs().format("YYYY-MM"))
   const [attendanceData, setAttendanceData] = useState<any>(null)
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar")
@@ -26,25 +28,42 @@ export default function EmployeeDetailPage() {
     }
   }, [params.id, selectedMonth])
 
-  const loadEmployeeData = () => {
-    const emp = dataStore.getEmployeeById(params.id as string)
-    if (!emp) {
-      router.push("/")
-      return
+  const loadEmployeeData = async () => {
+    try {
+      const empRes = await getEmployeeById(params.id as string)
+      if (!empRes.success || !empRes.data) {
+        router.push("/")
+        return
+      }
+      setEmployee(empRes.data)
+
+      // Fetch department
+      const deptRes = await getDepartmentById(empRes.data.departmentId)
+      if (deptRes.success && deptRes.data) setDepartment(deptRes.data)
+
+      // Simulate attendance summary (replace with your real API)
+      const [year, month] = selectedMonth.split("-")
+      const startDate = dayjs(`${year}-${month}-01`).toDate()
+      const endDate = dayjs(startDate).endOf("month").toDate()
+      const summary = await fetchAttendanceSummary(empRes.data._id, startDate, endDate)
+      setAttendanceData(summary)
+    } catch (error) {
+      console.error(error)
     }
-
-    setEmployee(emp)
-
-    // Get attendance data for selected month
-    const [year, month] = selectedMonth.split("-")
-    const startDate = dayjs(`${year}-${month}-01`).toDate()
-    const endDate = dayjs(startDate).endOf("month").toDate()
-
-    const summary = dataStore.getEmployeeAttendanceSummary(emp.id, startDate, endDate)
-    setAttendanceData(summary)
   }
 
-  const downloadEmployeeBarcode = async (empCode: string) => {
+  const fetchAttendanceSummary = async (employeeId: string, start: Date, end: Date) => {
+    // Replace this with real API call
+    return {
+      totalDays: 22,
+      totalHours: 160,
+      logs: [],
+      categoryStats: {},
+      supervisorStats: {},
+    }
+  }
+
+  const downloadEmployeeBarcode = async (id: string) => {
     const tempDiv = document.createElement("div")
     tempDiv.style.position = "absolute"
     tempDiv.style.left = "-9999px"
@@ -54,7 +73,7 @@ export default function EmployeeDetailPage() {
     document.body.appendChild(tempDiv)
 
     const JsBarcode = require("jsbarcode")
-    JsBarcode("#temp-barcode", empCode, {
+    JsBarcode("#temp-barcode", id, {
       width: 2,
       height: 60,
       fontSize: 14,
@@ -69,7 +88,7 @@ export default function EmployeeDetailPage() {
       })
 
       const link = document.createElement("a")
-      link.download = `employee_${empCode}_barcode.png`
+      link.download = `employee_${id}_barcode.png`
       link.href = canvas.toDataURL("image/png")
       link.click()
     } catch (error) {
@@ -161,7 +180,7 @@ export default function EmployeeDetailPage() {
           </Button>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold">{employee.name}</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">Employee Code: {employee.empCode}</p>
+            <p className="text-sm sm:text-base text-muted-foreground">Employee ID: {employee._id}</p>
           </div>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -192,10 +211,6 @@ export default function EmployeeDetailPage() {
               <p className="font-medium">{employee.name}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-muted-foreground">Employee Code</label>
-              <p className="font-medium">{employee.empCode}</p>
-            </div>
-            <div>
               <label className="text-sm font-medium text-muted-foreground">Mobile</label>
               <p className="font-medium">{employee.mobile}</p>
             </div>
@@ -205,7 +220,7 @@ export default function EmployeeDetailPage() {
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground">Department</label>
-              <p className="font-medium">{dataStore.getDepartmentById(employee.departmentId)?.name}</p>
+              <p className="font-medium">{department?.name || "N/A"}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground">Hourly Rate</label>
@@ -214,21 +229,23 @@ export default function EmployeeDetailPage() {
           </CardContent>
         </Card>
 
+        {/* Barcode */}
         <Card>
           <CardHeader>
             <CardTitle>Employee Barcode</CardTitle>
           </CardHeader>
           <CardContent className="text-center space-y-4">
             <div className="flex justify-center">
-              <Barcode value={employee.empCode} width={2} height={60} fontSize={14} />
+              <Barcode value={employee._id} width={2} height={60} fontSize={14} />
             </div>
-            <Button variant="outline" onClick={() => downloadEmployeeBarcode(employee.empCode)} className="w-full">
+            <Button variant="outline" onClick={() => downloadEmployeeBarcode(employee._id)} className="w-full">
               <Download className="h-4 w-4 mr-2" />
               Download Barcode
             </Button>
           </CardContent>
         </Card>
 
+        {/* Monthly Summary */}
         <Card>
           <CardHeader>
             <CardTitle>Monthly Summary</CardTitle>
@@ -255,6 +272,9 @@ export default function EmployeeDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+
+
 
       {/* Month Selector */}
       <Card>
