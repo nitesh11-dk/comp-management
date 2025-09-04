@@ -6,6 +6,7 @@ import { getUserFromCookies, getUserFromToken } from "@/lib/auth";
 // 🔹 Input interface
 // ---------------------------
 
+
 export interface ScanAttendanceInput {
     employeeId: mongoose.Types.ObjectId; // employee being scanned
 }

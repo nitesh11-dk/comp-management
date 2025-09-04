@@ -118,20 +118,7 @@ export default function BarcodeScanner({ onScan, isActive, onToggle }: BarcodeSc
     }
   }
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      // For demo purposes, we'll simulate a successful scan
-      // In a real app, you'd use a library to decode the barcode from the image
-      const fileName = file.name.toLowerCase()
-      if (fileName.includes("barcode") || fileName.includes("qr")) {
-        // Simulate extracting barcode data from filename or use actual barcode reading library
-        onScan("DEMO_SCAN_FROM_FILE")
-      } else {
-        setError("Please upload a valid barcode image")
-      }
-    }
-  }
+
 
   return (
     <Card>
@@ -212,30 +199,7 @@ export default function BarcodeScanner({ onScan, isActive, onToggle }: BarcodeSc
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="file-upload" className="text-sm sm:text-base">
-                Upload Barcode Image
-              </Label>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Input
-                  id="file-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  ref={fileInputRef}
-                  className="file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-sm file:bg-primary file:text-primary-foreground flex-1"
-                />
-                <Button
-                  onClick={() => fileInputRef.current?.click()}
-                  variant="outline"
-                  size="sm"
-                  className="w-full sm:w-auto"
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Browse
-                </Button>
-              </div>
-            </div>
+
           </div>
         ) : isActive ? (
           <div className="space-y-3 sm:space-y-4">

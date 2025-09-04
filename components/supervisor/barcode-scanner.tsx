@@ -41,16 +41,15 @@ export default function SupervisorBarcodeScanner({ scanEmployee }: Props) {
     try {
       const result = await scanEmployee(employeeId)
       setLastScannedEmployee(result)
-      setMessage(`✅ Employee ${employeeId} CHECKED ${result.lastScanType?.toUpperCase()}`)
+      setMessage(`✅ Employee ${result.employeeName} CHECKED ${result.lastScanType?.toUpperCase()}`)
       setMessageType("success")
       playSound("success")
     } catch (err: any) {
       console.error(err)
-      setMessage(`❌ ${err.message}`) // Ab yaha "Invalid employee ID format" show hoga
+      setMessage(`❌ ${err.message}`)
       setMessageType("error")
       playSound("error")
-    }
-    finally {
+    } finally {
       setIsProcessing(false)
       setManualInput("")
     }
@@ -88,9 +87,12 @@ export default function SupervisorBarcodeScanner({ scanEmployee }: Props) {
               <Card className="border-2 border-green-200 bg-green-50">
                 <CardContent>
                   <div className="flex items-center justify-center gap-4">
-                    <div className="p-2 rounded-full bg-green-100"><User className="h-6 w-6 text-green-600" /></div>
+                    <div className="p-2 rounded-full bg-green-100">
+                      <User className="h-6 w-6 text-green-600" />
+                    </div>
                     <div className="text-center">
-                      <h4 className="font-bold text-lg">{lastScannedEmployee.employeeId}</h4>
+                      <h4 className="font-bold text-lg">{lastScannedEmployee.employeeName}</h4>
+                      <p className="text-sm text-gray-500">ID: {lastScannedEmployee.employeeId}</p>
                       <Badge variant="default" className="mt-1">
                         {lastScannedEmployee.lastScanType === "out" ? "Checked OUT" : "Currently IN"}
                       </Badge>
@@ -104,16 +106,16 @@ export default function SupervisorBarcodeScanner({ scanEmployee }: Props) {
       </Card>
 
       <div className="space-y-2">
-        <button onClick={toggleScanner} className="px-4 py-2 bg-blue-100 text-blue-800 rounded-lg">
-          {isScannerActive ? "Stop Camera Scanner" : "Use Camera Scanner"}
-        </button>
 
-        {isScannerActive && <BarcodeScanner onScan={handleScan} isActive={isScannerActive} onToggle={toggleScanner} />}
 
-        <form onSubmit={handleManualSubmit} className="flex items-center gap-2 justify-center mt-2">
-          <input type="text" placeholder="Enter employee ID" value={manualInput} onChange={(e) => setManualInput(e.target.value)} className="px-3 py-2 border rounded-lg w-60" />
-          <button type="submit" className="px-3 py-2 bg-green-100 text-green-800 rounded-lg">Submit</button>
-        </form>
+        <BarcodeScanner
+          onScan={handleScan}
+          isActive={isScannerActive}
+          onToggle={toggleScanner}
+        />
+
+
+
       </div>
     </div>
   )
