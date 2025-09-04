@@ -36,8 +36,10 @@ export default function SupervisorBarcodeScanner({ scanEmployee }: Props) {
     } catch { console.warn("Audio not supported") }
   }
 
+  console.log("working ");
   const handleScan = async (employeeId: string) => {
     if (!employeeId.trim() || isProcessing) return
+    console.log(employeeId);
     setIsProcessing(true)
     try {
       const result = await scanEmployee(employeeId)
