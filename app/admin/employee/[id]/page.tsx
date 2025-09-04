@@ -297,9 +297,8 @@ export default function EmployeeDetailPage() {
                 {generateCalendarDays().map((day, index) => (
                   <div
                     key={index}
-                    className={`min-h-[60px] sm:min-h-[80px] p-1 sm:p-2 border rounded-lg ${
-                      day.isCurrentMonth ? "bg-white" : "bg-gray-50"
-                    } ${day.log ? getStatusColor(day.log) : ""}`}
+                    className={`min-h-[60px] sm:min-h-[80px] p-1 sm:p-2 border rounded-lg ${day.isCurrentMonth ? "bg-white" : "bg-gray-50"
+                      } ${day.log ? getStatusColor(day.log) : ""}`}
                   >
                     <div className="text-xs sm:text-sm font-medium">{day.date.format("D")}</div>
                     {day.log && day.isCurrentMonth && (

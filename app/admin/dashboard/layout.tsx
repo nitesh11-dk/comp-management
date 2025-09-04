@@ -41,7 +41,7 @@ export default function AdminLayout({
                 <aside className="w-64 bg-white shadow-lg border-r border-gray-200 flex flex-col">
                     <nav className="flex-1 p-4 space-y-3">
                         <Link
-                            href="/admin/dasboard/add-employee"
+                            href="/admin/dashboard/addemp"
                             className="block px-3 py-2 rounded-md hover:bg-indigo-50 text-gray-700 font-medium"
                         >
                             ➕ Add Employee

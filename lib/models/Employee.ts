@@ -2,14 +2,12 @@ import mongoose, { Schema, Document } from "mongoose";
 
 export interface IEmployee extends Document {
     name: string;
-    empCode: string;
     pfId?: string;
     esicId?: string;
     aadhaarNumber: string;
     mobile: string;
     departmentId: mongoose.Types.ObjectId;
     shiftType: string;
-    barcodeId: string;
     hourlyRate: number;
     profileComplete: boolean;
 }
@@ -17,9 +15,8 @@ export interface IEmployee extends Document {
 const EmployeeSchema = new Schema<IEmployee>(
     {
         name: { type: String, required: true },
-        empCode: { type: String, required: true, unique: true },
 
-        // ✅ Unique PF and ESIC IDs
+        // ✅ Keep PF and ESIC IDs
         pfId: { type: String, unique: true, sparse: true },
         esicId: { type: String, unique: true, sparse: true },
 
@@ -33,7 +30,6 @@ const EmployeeSchema = new Schema<IEmployee>(
         },
         shiftType: { type: String, required: true },
 
-        barcodeId: { type: String, required: true, unique: true },
         hourlyRate: { type: Number, required: true },
 
         profileComplete: { type: Boolean, default: false },

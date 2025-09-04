@@ -6,45 +6,12 @@ import Employee, { IEmployee } from "@/lib/models/Employee";
 import { ActionResponse } from "@/lib/types/types";
 import mongoose from "mongoose";
 
-// Helper to generate empCode
-function generateEmpCode(): string {
-    const randomNum = Math.floor(Math.random() * 9000) + 1000;
-    return `EMP${randomNum}`;
-}
-
-// Helper to generate random alphabets
-function generateRandomAlphabets(length: number): string {
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    let result = "";
-    for (let i = 0; i < length; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
-}
 
 export async function createEmployee(
     data: Partial<IEmployee>
 ): Promise<ActionResponse<IEmployee>> {
     try {
         await connect();
-
-        let empCode: string;
-        let barcodeId: string;
-
-        // 🔹 Loop until unique empCode + barcodeId are generated
-        let isUnique = false;
-        while (!isUnique) {
-            empCode = generateEmpCode();
-            barcodeId = empCode + generateRandomAlphabets(6);
-
-            const exists = await Employee.findOne({
-                $or: [{ empCode }, { barcodeId }],
-            });
-
-            if (!exists) {
-                isUnique = true;
-            }
-        }
 
         // 🔹 Check uniqueness of Aadhaar, PF, ESIC manually
         if (data.aadhaarNumber) {
@@ -77,11 +44,9 @@ export async function createEmployee(
             }
         }
 
-        // 🔹 Finally create employee
+        // 🔹 Create employee
         const employee = await Employee.create({
             ...data,
-            empCode,
-            barcodeId,
             hourlyRate: data.hourlyRate ?? 100, // default
             profileComplete: true,
         });
@@ -99,7 +64,6 @@ export async function createEmployee(
         };
     }
 }
-
 // 🔹 Get All Employees
 export async function getEmployees(): Promise<ActionResponse<IEmployee[]>> {
     try {

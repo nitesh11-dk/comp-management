@@ -1,9 +1,14 @@
-import React from 'react'
+import React from "react"
+import { scanEmployee } from "./actions"
+import SupervisorBarcodeScanner from "@/components/supervisor/barcode-scanner"
 
-const page = () => {
+const Page = async () => {
+    // Directly pass server action to client component
     return (
-        <div>page</div>
+        <div className="p-4">
+            <SupervisorBarcodeScanner scanEmployee={scanEmployee} />
+        </div>
     )
 }
 
-export default page
+export default Page

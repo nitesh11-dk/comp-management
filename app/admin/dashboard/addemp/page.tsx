@@ -21,7 +21,6 @@ import html2canvas from "html2canvas"
 export default function AddEmployeePage() {
   const router = useRouter()
 
-  // 🔹 Form state
   const [formData, setFormData] = useState({
     name: "",
     aadhaarNumber: "",
@@ -30,31 +29,25 @@ export default function AddEmployeePage() {
     shiftType: "",
     pfId: "",
     esicId: "",
-    hourlyRate: "", // added hourly rate
+    hourlyRate: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // 🔹 Departments state
   const [departments, setDepartments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  // 🔹 Messages and generated employee
   const [message, setMessage] = useState("")
   const [messageType, setMessageType] = useState<"success" | "error">("success")
   const [generatedEmployee, setGeneratedEmployee] = useState<any>(null)
 
   const barcodeRef = useRef<HTMLDivElement>(null)
 
-  // 🔹 Fetch departments on mount
   useEffect(() => {
     const fetchDepartments = async () => {
       try {
         const res = await getDepartments()
-        if (res.success) {
-          setDepartments(res.data || [])
-        } else {
-          toast.error(res.message || "⚠️ Failed to load departments")
-        }
+        if (res.success) setDepartments(res.data || [])
+        else toast.error(res.message || "⚠️ Failed to load departments")
       } catch (err) {
         console.error("Error fetching departments:", err)
         toast.error("🚨 Error fetching departments")
@@ -62,22 +55,15 @@ export default function AddEmployeePage() {
         setLoading(false)
       }
     }
-
     fetchDepartments()
   }, [])
 
-  // 🔹 Download barcode
-  const downloadBarcode = async (empCode: string) => {
+  const downloadBarcode = async (employeeId: string) => {
     if (!barcodeRef.current) return
-
     try {
-      const canvas = await html2canvas(barcodeRef.current, {
-        backgroundColor: "#ffffff",
-        scale: 2,
-      })
-
+      const canvas = await html2canvas(barcodeRef.current, { backgroundColor: "#ffffff", scale: 2 })
       const link = document.createElement("a")
-      link.download = `employee_${empCode}_barcode.png`
+      link.download = `employee_${employeeId}_barcode.png`
       link.href = canvas.toDataURL("image/png")
       link.click()
     } catch (error) {
@@ -85,7 +71,6 @@ export default function AddEmployeePage() {
     }
   }
 
-  // 🔹 Handle form submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
@@ -93,20 +78,17 @@ export default function AddEmployeePage() {
     try {
       const res = await createEmployee({
         ...formData,
-        hourlyRate: Number(formData.hourlyRate), // convert to number
+        hourlyRate: Number(formData.hourlyRate),
       })
 
       if (res.success && res.data) {
         setGeneratedEmployee(res.data)
-        setMessage(`Employee ${res.data.name} added successfully! Employee Code: ${res.data.empCode}`)
+        setMessage(`Employee ${res.data.name} added successfully!`)
         setMessageType("success")
 
-        // Auto-download barcode
-        setTimeout(() => {
-          downloadBarcode(res.data.empCode)
-        }, 500)
+        // Auto-download barcode based on MongoDB _id
+        setTimeout(() => downloadBarcode(res.data._id), 500)
 
-        // Clear form after success
         setFormData({
           name: "",
           aadhaarNumber: "",
@@ -130,7 +112,6 @@ export default function AddEmployeePage() {
     }
   }
 
-  // 🔹 Clear form
   const handleClear = () => {
     setFormData({
       name: "",
@@ -149,7 +130,6 @@ export default function AddEmployeePage() {
   return (
     <div className="min-h-screen bg-background p-2 sm:p-4">
       <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold">Add New Employee</h1>
@@ -158,16 +138,15 @@ export default function AddEmployeePage() {
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
-          {/* Employee Form */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                <UserPlus className="h-4 w-4 sm:h-5 sm:w-5" />
-                Employee Information
+                <UserPlus className="h-4 w-4 sm:h-5 sm:w-5" /> Employee Information
               </CardTitle>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+                {/* Name */}
                 <div className="space-y-2">
                   <Label htmlFor="name">Full Name *</Label>
                   <Input
@@ -179,6 +158,7 @@ export default function AddEmployeePage() {
                   />
                 </div>
 
+                {/* Aadhaar */}
                 <div className="space-y-2">
                   <Label htmlFor="aadhaarNumber">Aadhaar Number *</Label>
                   <Input
@@ -190,6 +170,7 @@ export default function AddEmployeePage() {
                   />
                 </div>
 
+                {/* Mobile */}
                 <div className="space-y-2">
                   <Label htmlFor="mobile">Mobile Number *</Label>
                   <Input
@@ -201,6 +182,7 @@ export default function AddEmployeePage() {
                   />
                 </div>
 
+                {/* PF & ESIC */}
                 <div className="space-y-2">
                   <Label htmlFor="pfId">PF ID (Optional)</Label>
                   <Input
@@ -221,6 +203,7 @@ export default function AddEmployeePage() {
                   />
                 </div>
 
+                {/* Department */}
                 <div className="space-y-2">
                   <Label htmlFor="departmentId">Department *</Label>
                   <Select
@@ -240,6 +223,7 @@ export default function AddEmployeePage() {
                   </Select>
                 </div>
 
+                {/* Shift */}
                 <div className="space-y-2">
                   <Label htmlFor="shiftType">Shift Type *</Label>
                   <Select
@@ -257,6 +241,7 @@ export default function AddEmployeePage() {
                   </Select>
                 </div>
 
+                {/* Hourly Rate */}
                 <div className="space-y-2">
                   <Label htmlFor="hourlyRate">Hourly Rate (₹) *</Label>
                   <Input
@@ -280,15 +265,14 @@ export default function AddEmployeePage() {
                     {isSubmitting ? "Adding Employee..." : "Add Employee"}
                   </Button>
                   <Button type="button" variant="outline" onClick={handleClear} className="flex-1 sm:flex-none">
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Clear
+                    <Trash2 className="h-4 w-4 mr-2" /> Clear
                   </Button>
                 </div>
               </form>
             </CardContent>
           </Card>
 
-          {/* Generated Barcode Display */}
+          {/* Barcode display based on MongoDB _id */}
           {generatedEmployee && (
             <Card className="border-2 border-green-200 bg-green-50">
               <CardHeader>
@@ -297,9 +281,7 @@ export default function AddEmployeePage() {
               <CardContent className="space-y-3 sm:space-y-4">
                 <div className="space-y-2">
                   <p><strong>Name:</strong> {generatedEmployee.name}</p>
-                  <p><strong>Employee Code:</strong> {generatedEmployee.empCode}</p>
-                  <p>
-                    <strong>Department:</strong>{" "}
+                  <p><strong>Department:</strong>{" "}
                     {departments.find((d) => d._id === generatedEmployee.departmentId)?.name}
                   </p>
                   {generatedEmployee.pfId && <p><strong>PF ID:</strong> {generatedEmployee.pfId}</p>}
@@ -310,7 +292,7 @@ export default function AddEmployeePage() {
                 <div className="text-center space-y-3 sm:space-y-4">
                   <div className="bg-white p-3 sm:p-4 rounded-lg inline-block" ref={barcodeRef}>
                     <Barcode
-                      value={generatedEmployee.barcodeId}
+                      value={generatedEmployee._id} // ✅ Use MongoDB _id for barcode
                       format="CODE128"
                       width={2}
                       height={100}
@@ -322,19 +304,16 @@ export default function AddEmployeePage() {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Button
-                      onClick={() => downloadBarcode(generatedEmployee.barcodeId)}
-                      variant="outline"
-                      className="w-full"
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Download Barcode
-                    </Button>
-                    <p className="text-xs text-green-700">
-                      Barcode automatically downloaded. Use this for attendance scanning.
-                    </p>
-                  </div>
+                  <Button
+                    onClick={() => downloadBarcode(generatedEmployee._id)}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    <Download className="h-4 w-4 mr-2" /> Download Barcode
+                  </Button>
+                  <p className="text-xs text-green-700">
+                    Barcode automatically generated from MongoDB _id. Use this for attendance scanning.
+                  </p>
                 </div>
               </CardContent>
             </Card>
