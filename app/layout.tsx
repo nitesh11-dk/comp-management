@@ -6,7 +6,7 @@ import "./globals.css"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Manpower Management System",
+  title: "Shree Sai Engenerring",
   description: "Complete manpower management solution with attendance tracking",
 }
 

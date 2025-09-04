@@ -1,25 +1,25 @@
 // lib/models/EmployeeAttendanceWallet.ts
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document } from "mongoose"
 
 export interface IAttendanceEntry {
-    timestamp: Date;
-    scanType: "in" | "out";
-    departmentId: mongoose.Types.ObjectId;
-    scannedBy: mongoose.Types.ObjectId;
-    autoClosed?: boolean;
+    timestamp: Date
+    scanType: "in" | "out"
+    departmentId: mongoose.Types.ObjectId
+    scannedBy: mongoose.Types.ObjectId
+    autoClosed?: boolean
 }
 
 export interface IWorkLog {
-    date: Date;
-    departmentId: mongoose.Types.ObjectId;
-    totalHours: number;
-    salaryEarned: number;
+    date: Date
+    departmentId: mongoose.Types.ObjectId
+    totalHours: number
+    salaryEarned: number
 }
 
 export interface IAttendanceWallet extends Document {
-    employeeId: mongoose.Types.ObjectId;
-    entries: IAttendanceEntry[];
-    workLogs: IWorkLog[];
+    employeeId: mongoose.Types.ObjectId
+    entries: IAttendanceEntry[]
+    workLogs: IWorkLog[]
 }
 
 const AttendanceEntrySchema = new Schema<IAttendanceEntry>(
@@ -31,7 +31,7 @@ const AttendanceEntrySchema = new Schema<IAttendanceEntry>(
         autoClosed: { type: Boolean, default: false },
     },
     { _id: false }
-);
+)
 
 const WorkLogSchema = new Schema<IWorkLog>(
     {
@@ -41,7 +41,7 @@ const WorkLogSchema = new Schema<IWorkLog>(
         salaryEarned: { type: Number, required: true, default: 0 },
     },
     { _id: false }
-);
+)
 
 const AttendanceWalletSchema = new Schema<IAttendanceWallet>(
     {
@@ -50,50 +50,11 @@ const AttendanceWalletSchema = new Schema<IAttendanceWallet>(
         workLogs: [WorkLogSchema],
     },
     { timestamps: true }
-);
-
-/**
- * 🔹 Helper method to calculate workLogs from entries
- */
-AttendanceWalletSchema.methods.calculateWorkLogs = function (hourlyRate: number) {
-    const groupedByDate: Record<string, IAttendanceEntry[]> = {};
-
-    this.entries.forEach((entry: IAttendanceEntry) => {
-        const dateStr = entry.timestamp.toISOString().split("T")[0];
-        if (!groupedByDate[dateStr]) groupedByDate[dateStr] = [];
-        groupedByDate[dateStr].push(entry);
-    });
-
-    const logs: IWorkLog[] = [];
-
-    for (const date in groupedByDate) {
-        const dayEntries = groupedByDate[date].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-        let totalMs = 0;
-
-        for (let i = 0; i < dayEntries.length; i += 2) {
-            const inEntry = dayEntries[i];
-            const outEntry = dayEntries[i + 1];
-            if (inEntry && outEntry && inEntry.scanType === "in" && outEntry.scanType === "out") {
-                totalMs += outEntry.timestamp.getTime() - inEntry.timestamp.getTime();
-            }
-        }
-
-        const totalHours = totalMs / (1000 * 60 * 60);
-        logs.push({
-            date: new Date(date),
-            departmentId: dayEntries[0].departmentId,
-            totalHours,
-            salaryEarned: totalHours * hourlyRate,
-        });
-    }
-
-    this.workLogs = logs;
-    return this;
-};
+)
 
 // 🔹 Fix for Next.js hot reload / undefined mongoose.models
 const AttendanceWallet =
     mongoose.models["AttendanceWallet"] ||
-    mongoose.model<IAttendanceWallet>("AttendanceWallet", AttendanceWalletSchema);
+    mongoose.model<IAttendanceWallet>("AttendanceWallet", AttendanceWalletSchema)
 
-export default AttendanceWallet;
+export default AttendanceWallet
