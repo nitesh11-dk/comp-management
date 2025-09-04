@@ -11,10 +11,17 @@ export default function CameraBarcodeScanner() {
     const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
     const [selectedDevice, setSelectedDevice] = useState<string>("");
 
-    // Fetch available cameras
     useEffect(() => {
+        // Request permission first
         navigator.mediaDevices
-            .enumerateDevices()
+            .getUserMedia({ video: true })
+            .then((stream) => {
+                // Stop stream after permission granted (we only needed the access prompt)
+                stream.getTracks().forEach((track) => track.stop());
+
+                // Now enumerate devices
+                return navigator.mediaDevices.enumerateDevices();
+            })
             .then((mediaDevices) => {
                 const videoDevices = mediaDevices.filter((d) => d.kind === "videoinput");
                 setDevices(videoDevices);
@@ -22,8 +29,12 @@ export default function CameraBarcodeScanner() {
                     setSelectedDevice(videoDevices[0].deviceId);
                 }
             })
-            .catch((err) => console.error("Camera error:", err));
+            .catch((err) => {
+                console.error("Camera access denied:", err);
+                alert("Please allow camera permissions in your browser settings.");
+            });
     }, []);
+
 
     const capturePhoto = () => {
         const imageSrc = webcamRef.current?.getScreenshot();
