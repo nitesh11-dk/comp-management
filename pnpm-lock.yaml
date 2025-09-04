@@ -11,6 +11,9 @@ importers:
       '@ericblade/quagga2':
         specifier: ^1.8.4
         version: 1.8.4
+      '@maslick/koder':
+        specifier: ^1.3.2
+        version: 1.3.2
       '@radix-ui/react-accordion':
         specifier: latest
         version: 1.2.11(@types/react-dom@18.0.0)(@types/react@18.0.0)(react-dom@18.0.0(react@18.0.0))(react@18.0.0)
@@ -176,6 +179,9 @@ importers:
       react-toastify:
         specifier: ^11.0.5
         version: 11.0.5(react-dom@18.0.0(react@18.0.0))(react@18.0.0)
+      react-webcam:
+        specifier: ^7.2.0
+        version: 7.2.0(react-dom@18.0.0(react@18.0.0))(react@18.0.0)
       recharts:
         specifier: latest
         version: 2.15.4(react-dom@18.0.0(react@18.0.0))(react@18.0.0)
@@ -287,6 +293,9 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.25':
     resolution: {integrity: sha512-vNk6aEwybGtawWmy/PzwnGDOjCkLWSD2wqvjGGAgOAwCGWySYXfYoxt00IJkTF+8Lb57DwOb3Aa0o9CApepiYQ==}
+
+  '@maslick/koder@1.3.2':
+    resolution: {integrity: sha512-2OkpZ21M+YCqgapt9xaSS05+DL7uQGleYPWpbNqMEuqf8Rt+rIk9gwa/AWdw9mDFUbwhsJ2sbrzTFT9DrUyaig==}
 
   '@mongodb-js/saslprep@1.3.0':
     resolution: {integrity: sha512-zlayKCsIjYb7/IdfqxorK5+xUMyi4vOKcFy10wKJYc63NSdKI8mNME+uJqfatkPmOSMMUiojrL58IePKBm3gvQ==}
@@ -2726,6 +2735,12 @@ packages:
       react: '>=16.6.0'
       react-dom: '>=16.6.0'
 
+  react-webcam@7.2.0:
+    resolution: {integrity: sha512-xkrzYPqa1ag2DP+2Q/kLKBmCIfEx49bVdgCCCcZf88oF+0NPEbkwYk3/s/C7Zy0mhM8k+hpdNkBLzxg8H0aWcg==}
+    peerDependencies:
+      react: '>=16.2.0'
+      react-dom: '>=16.2.0'
+
   react@18.0.0:
     resolution: {integrity: sha512-x+VL6wbT4JRVPm7EGxXhZ8w8LTROaxPXOqhlGyVSrv0sB1jkyFGgXxJ8LVoPRLvPR6/CIZGFmfzqUa2NYeMr2A==}
     engines: {node: '>=0.10.0'}
@@ -3302,6 +3317,8 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
+
+  '@maslick/koder@1.3.2': {}
 
   '@mongodb-js/saslprep@1.3.0':
     dependencies:
@@ -5880,6 +5897,11 @@ snapshots:
       dom-helpers: 5.2.1
       loose-envify: 1.4.0
       prop-types: 15.8.1
+      react: 18.0.0
+      react-dom: 18.0.0(react@18.0.0)
+
+  react-webcam@7.2.0(react-dom@18.0.0(react@18.0.0))(react@18.0.0):
+    dependencies:
       react: 18.0.0
       react-dom: 18.0.0(react@18.0.0)
 

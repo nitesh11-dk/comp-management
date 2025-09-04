@@ -8,10 +8,11 @@ export default function HomePage() {
 
   return (
     <div className="p-4">
-      <h1 className="text-xl font-bold">📷 Barcode Scanner (Quagga2)</h1>
+      <h1 className="text-xl font-bold">📷 Quagga2 Barcode Scanner</h1>
+
       {code ? (
         <div className="mt-4 p-2 bg-green-200 rounded">
-          ✅ Detected Barcode: <strong>{code}</strong>
+          ✅ Detected: <strong>{code}</strong>
         </div>
       ) : (
         <BarcodeScanner onDetected={(c) => setCode(c)} />

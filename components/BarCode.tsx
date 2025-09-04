@@ -1,84 +1,139 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Webcam from "react-webcam";
 import Quagga from "@ericblade/quagga2";
 
-export default function BarcodeScanner({ onDetected }: { onDetected: (code: string) => void }) {
-    const scannerRef = useRef<HTMLDivElement>(null);
-    const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
-    const [selectedCam, setSelectedCam] = useState<string>("");
+export default function CameraBarcodeScanner() {
+    const webcamRef = useRef<Webcam>(null);
+    const [preview, setPreview] = useState<string | null>(null);
+    const [barcode, setBarcode] = useState<string | null>(null);
+    const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+    const [selectedDevice, setSelectedDevice] = useState<string>("");
 
-    // Get available cameras on mount
+    // Fetch available cameras
     useEffect(() => {
-        Quagga.CameraAccess.enumerateVideoDevices()
-            .then((devices) => {
-                setCameras(devices);
-                if (devices.length > 0) {
-                    setSelectedCam(devices[0].deviceId); // default to first camera
+        navigator.mediaDevices
+            .enumerateDevices()
+            .then((mediaDevices) => {
+                const videoDevices = mediaDevices.filter((d) => d.kind === "videoinput");
+                setDevices(videoDevices);
+                if (videoDevices.length > 0) {
+                    setSelectedDevice(videoDevices[0].deviceId);
                 }
             })
-            .catch((err) => console.error("Camera enum error:", err));
+            .catch((err) => console.error("Camera error:", err));
     }, []);
 
-    // Initialize scanner whenever selectedCam changes
-    useEffect(() => {
-        if (!scannerRef.current || !selectedCam) return;
+    const capturePhoto = () => {
+        const imageSrc = webcamRef.current?.getScreenshot();
+        if (imageSrc) {
+            setPreview(imageSrc);
+            decodeBarcode(imageSrc);
+        }
+    };
 
-        Quagga.init(
+    const decodeBarcode = (imageSrc: string) => {
+        Quagga.decodeSingle(
             {
-                inputStream: {
-                    type: "LiveStream",
-                    target: scannerRef.current,
-                    constraints: {
-                        deviceId: selectedCam, // use selected camera
-                    },
-                },
+                src: imageSrc,
+                numOfWorkers: 0,
+                inputStream: { size: 800 },
                 decoder: {
-                    readers: ["code_128_reader", "ean_reader", "ean_8_reader"], // barcode formats
+                    readers: ["code_128_reader", "ean_reader", "ean_8_reader", "upc_reader"],
                 },
             },
-            (err) => {
-                if (err) {
-                    console.error("Quagga init error:", err);
-                    return;
+            (res) => {
+                if (res?.codeResult?.code) {
+                    console.log("✅ Barcode detected:", res.codeResult.code);
+                    setBarcode(res.codeResult.code);
+                } else {
+                    console.log("❌ No barcode found");
+                    setBarcode("❌ No barcode found");
                 }
-                Quagga.start();
             }
         );
-
-        Quagga.onDetected((result) => {
-            if (result?.codeResult?.code) {
-                onDetected(result.codeResult.code);
-                Quagga.stop();
-            }
-        });
-
-        return () => {
-            Quagga.stop();
-            Quagga.offDetected(() => { });
-        };
-    }, [selectedCam, onDetected]);
+    };
 
     return (
-        <div>
+        <div className="p-4 max-w-md mx-auto">
+            <h1 className="text-xl font-bold mb-3">📸 Camera Barcode Scanner</h1>
+
             {/* Camera Selector */}
-            <div className="mb-2">
-                <label className="font-medium mr-2">Choose Camera:</label>
-                <select
-                    value={selectedCam}
-                    onChange={(e) => setSelectedCam(e.target.value)}
-                    className="border rounded p-1"
-                >
-                    {cameras.map((cam, idx) => (
-                        <option key={cam.deviceId} value={cam.deviceId}>
-                            {cam.label || `Camera ${idx + 1}`}
-                        </option>
-                    ))}
-                </select>
+            {devices.length > 0 && (
+                <div className="mb-3">
+                    <label className="mr-2 font-medium">Choose Camera:</label>
+                    <select
+                        value={selectedDevice}
+                        onChange={(e) => setSelectedDevice(e.target.value)}
+                        className="border p-1 rounded"
+                    >
+                        {devices.map((device, idx) => (
+                            <option key={device.deviceId} value={device.deviceId}>
+                                {device.label || `Camera ${idx + 1}`}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            )}
+
+            {/* Webcam or Preview */}
+            {!preview && selectedDevice && (
+                <Webcam
+                    audio={false}
+                    ref={webcamRef}
+                    screenshotFormat="image/jpeg"
+                    videoConstraints={{
+                        deviceId: selectedDevice ? { exact: selectedDevice } : undefined,
+                        facingMode: "environment",
+                        width: 320, // 👈 Smaller width
+                        height: 240, // 👈 Smaller height
+                    }}
+                    style={{
+                        width: "320px",
+                        height: "240px",
+                        borderRadius: "8px",
+                        border: "2px solid #ddd",
+                    }}
+                />
+            )}
+
+            {/* Buttons */}
+            <div className="mt-3 flex gap-2">
+                {!preview && (
+                    <button
+                        onClick={capturePhoto}
+                        className="px-4 py-2 bg-blue-600 text-white rounded"
+                    >
+                        Capture
+                    </button>
+                )}
+                {preview && (
+                    <button
+                        onClick={() => {
+                            setPreview(null);
+                            setBarcode(null);
+                        }}
+                        className="px-4 py-2 bg-gray-600 text-white rounded"
+                    >
+                        Retake
+                    </button>
+                )}
             </div>
 
-            {/* Scanner */}
-            <div ref={scannerRef} style={{ width: "100%", height: "400px" }} />
+            {/* Preview */}
+            {preview && (
+                <div className="mt-4">
+                    <img src={preview} alt="Captured" className="max-h-64 border" />
+                </div>
+            )}
+
+            {/* Barcode Result */}
+            {barcode && (
+                <div className="mt-3 p-2 bg-green-200 rounded">
+                    📦 Detected Barcode: <strong>{barcode}</strong>
+                </div>
+            )}
         </div>
     );
 }
