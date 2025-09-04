@@ -2,10 +2,9 @@
 
 import { useState } from "react"
 import { ScanResult } from "@/actions/actions"
-import BarcodeScanner from "@/components/BarCode" // reusable scanner
+import BarcodeScanner from "@/components/BarCode"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { User, CheckCircle, XCircle, Clock } from "lucide-react"
 
 type Props = {
@@ -19,6 +18,7 @@ export default function SupervisorBarcodeScanner({ scanEmployee }: Props) {
   const [messageType, setMessageType] = useState<"success" | "error" | "info">("info")
   const [isProcessing, setIsProcessing] = useState(false)
   const [manualInput, setManualInput] = useState("")
+  const [showPopup, setShowPopup] = useState(false)
 
   const playSound = (type: "success" | "error") => {
     try {
@@ -50,11 +50,13 @@ export default function SupervisorBarcodeScanner({ scanEmployee }: Props) {
       )
       setMessageType("success")
       playSound("success")
+      setShowPopup(true) // show the popup when scanned
     } catch (err: any) {
       console.error(err)
       setMessage(`❌ ${err.message}`)
       setMessageType("error")
       playSound("error")
+      setShowPopup(true) // show error popup
     } finally {
       setIsProcessing(false)
       setManualInput("")
@@ -66,44 +68,14 @@ export default function SupervisorBarcodeScanner({ scanEmployee }: Props) {
     handleScan(manualInput)
   }
 
+  const closePopup = () => {
+    setShowPopup(false)
+    setLastScannedEmployee(null)
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center space-y-6 px-4 py-4 max-w-lg mx-auto">
+    <div className="flex flex-col items-center justify-center space-y-6 px-4 py-4 max-w-lg mx-auto relative">
       <h2 className="text-2xl sm:text-3xl font-bold text-center">Supervisor Attendance Scanner</h2>
-
-      <Card className="w-full border-2 border-dashed border-primary">
-        <CardContent className="space-y-4">
-          <div className="w-full text-center">
-
-
-            {lastScannedEmployee && (
-              <Card className="border-2 border-green-200 bg-green-50 mt-4">
-                <CardContent>
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                    <div className="p-2 rounded-full bg-green-100">
-                      <User className="h-6 w-6 text-green-600" />
-                    </div>
-                    <div className="text-center sm:text-left">
-                      <h4 className="font-bold text-lg">{lastScannedEmployee.employeeName}</h4>
-                      <p className="text-sm text-gray-500">EmpCode: {lastScannedEmployee.empCode}</p>
-                      <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 mt-1">
-                        <Badge variant="default">
-                          {lastScannedEmployee.lastScanType === "out" ? "Checked OUT" : "Currently IN"}
-                        </Badge>
-                        {scanTime && (
-                          <div className="flex items-center gap-1 text-gray-600 text-sm">
-                            <Clock className="h-4 w-4" />
-                            {scanTime.toLocaleTimeString()}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Camera scanner */}
       <Card className="w-full border p-2 rounded">
@@ -131,6 +103,48 @@ export default function SupervisorBarcodeScanner({ scanEmployee }: Props) {
           Submit
         </button>
       </form>
+
+      {/* Popup Overlay */}
+      {showPopup && lastScannedEmployee && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4"
+          onClick={closePopup} // click anywhere to close
+        >
+          <Card
+            className="max-w-md w-full border-2 border-green-200 bg-green-50 cursor-pointer"
+            onClick={(e) => e.stopPropagation()} // prevent closing if clicked inside card
+          >
+            <CardContent>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <div className="p-2 rounded-full bg-green-100">
+                  <User className="h-6 w-6 text-green-600" />
+                </div>
+                <div className="text-center sm:text-left">
+                  <h4 className="font-bold text-lg">{lastScannedEmployee.employeeName}</h4>
+                  <p className="text-sm text-gray-500">EmpCode: {lastScannedEmployee.empCode}</p>
+                  <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 mt-1">
+                    <Badge variant="default">
+                      {lastScannedEmployee.lastScanType === "out" ? "Checked OUT" : "Currently IN"}
+                    </Badge>
+                    {scanTime && (
+                      <div className="flex items-center gap-1 text-gray-600 text-sm">
+                        <Clock className="h-4 w-4" />
+                        {scanTime.toLocaleTimeString()}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={closePopup}
+                    className="mt-4 px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
+                  >
+                    OK
+                  </button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }

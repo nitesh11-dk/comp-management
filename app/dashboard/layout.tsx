@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
-import { Clock } from "lucide-react";
+import { Clock, LogOut } from "lucide-react"; // use LogOut icon
 import { useEffect, useState } from "react";
 import { getCurrentUserDepartment } from "@/actions/department";
 import { IDepartment } from "@/lib/models/Department";
@@ -57,15 +57,16 @@ export default function SupervisorLayout({ children }: SupervisorLayoutProps) {
                         className="flex items-center gap-1 py-2 px-3 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
                     >
                         <Clock className="h-4 w-4" />
-                        <span className="hidden sm:inline">History</span> {/* hidden on mobile */}
+                        <span className="hidden sm:inline">History</span>
                     </button>
 
                     {/* Logout Button */}
                     <button
                         onClick={handleLogout}
-                        className="py-2 px-4 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+                        className="flex items-center gap-1 py-2 px-3 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
                     >
-                        🚪 Logout
+                        <LogOut className="h-4 w-4" />
+                        <span className="hidden sm:inline">Logout</span> {/* hidden on mobile */}
                     </button>
                 </div>
             </header>

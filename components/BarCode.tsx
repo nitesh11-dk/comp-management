@@ -91,13 +91,13 @@ export default function BarcodeScanner({
     }, [selectedDevice, fps, qrboxSize, onScan]);
 
     return (
-        <div className="p-2 w-full max-w-md mx-auto">
+        <div className="p-2 w-full  max-w-md mx-auto">
             {/* Camera selector (only if multiple cameras) */}
             {devices.length > 1 && (
                 <select
                     value={selectedDevice || ""}
                     onChange={(e) => setSelectedDevice(e.target.value)}
-                    className="border p-2 rounded mb-4 w-full"
+                    className="border p-2  rounded mb-4 w-full"
                 >
                     {devices.map((device, i) => (
                         <option key={i} value={device.deviceId}>
@@ -113,7 +113,7 @@ export default function BarcodeScanner({
                 style={{
                     width: "100%",
                     maxWidth: qrboxSize,
-                    aspectRatio: "1 / 1",
+                    aspectRatio: "2 / 1",
                     border: "1px solid #ccc",
                     margin: "0 auto",
                     ...style,
