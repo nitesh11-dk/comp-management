@@ -12,7 +12,7 @@ export default async function connect() {
 
   if (!cached.promise) {
     cached.promise = mongoose
-      .connect(`${MONGODB_URI}/rzrwallet`)
+      .connect(`${MONGODB_URI}/comp`)
       .then((mongoose) => mongoose);
   }
 
