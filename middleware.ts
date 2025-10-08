@@ -13,16 +13,26 @@ export async function middleware(req: Request) {
   const isAuthPage =
     pathname.startsWith("/login") || pathname.startsWith("/register");
 
-  // Handle root route "/" for logged-in users
-  if (pathname === "/" && token) {
-    const payload = await getUserFromToken(token);
-    if (payload) {
-      const redirectUrl = payload.role === "admin" ? "/admin" : "/dashboard";
-      return NextResponse.redirect(new URL(redirectUrl, req.url));
+  // BLOCK ROOT ROUTE "/"
+  if (pathname === "/") {
+    if (token) {
+      const payload = await getUserFromToken(token);
+      if (payload) {
+        // Logged-in users -> proper dashboard
+        const redirectUrl =
+          payload.role === "admin" ? "/admin/dashboard" : "/dashboard";
+        return NextResponse.redirect(new URL(redirectUrl, req.url));
+      } else {
+        // Invalid token -> redirect to login
+        return NextResponse.redirect(new URL("/login", req.url));
+      }
+    } else {
+      // Not logged-in -> redirect to login
+      return NextResponse.redirect(new URL("/login", req.url));
     }
   }
 
-  // If route is protected
+  // Protected routes
   if (isProtectedRoute) {
     if (!token) {
       return NextResponse.redirect(new URL("/login", req.url));
@@ -33,13 +43,18 @@ export async function middleware(req: Request) {
       return NextResponse.redirect(new URL("/login", req.url));
     }
 
-    // ✅ Role-based route restriction
+    // Role-based route restriction
     if (pathname.startsWith("/admin") && payload.role !== "admin") {
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
 
     if (pathname.startsWith("/dashboard") && payload.role !== "supervisor") {
-      return NextResponse.redirect(new URL("/admin", req.url));
+      return NextResponse.redirect(new URL("/admin/dashboard", req.url));
+    }
+
+    // Redirect admin from "/admin" to "/admin/dashboard"
+    if (pathname === "/admin" && payload.role === "admin") {
+      return NextResponse.redirect(new URL("/admin/dashboard", req.url));
     }
 
     const response = NextResponse.next();
@@ -53,7 +68,7 @@ export async function middleware(req: Request) {
     const payload = await getUserFromToken(token);
     if (payload) {
       const redirectUrl =
-        payload.role === "admin" ? "/admin" : "/dashboard";
+        payload.role === "admin" ? "/admin/dashboard" : "/dashboard";
       return NextResponse.redirect(new URL(redirectUrl, req.url));
     }
   }
@@ -61,7 +76,7 @@ export async function middleware(req: Request) {
   return NextResponse.next();
 }
 
-// ✅ Limit middleware to specific paths
+// Limit middleware to specific paths
 export const config = {
   matcher: ["/", "/login", "/register", "/dashboard/:path*", "/admin/:path*"],
 };
