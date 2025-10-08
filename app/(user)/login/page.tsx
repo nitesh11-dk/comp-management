@@ -23,9 +23,10 @@ export default function LoginPage() {
       const res = await loginUser(formData);
 
       if (res.success) {
-        toast.success("✅ Logged in successfully!", { autoClose: 2000 });
+        toast.success(res.message || "✅ Logged in successfully!", {
+          autoClose: 2000,
+        });
 
-        // store minimal user info (useful for UI state)
         localStorage.setItem(
           "user",
           JSON.stringify({
@@ -35,21 +36,20 @@ export default function LoginPage() {
           })
         );
 
-        // ✅ redirect based on role
         if (res.user.role === "admin") {
           router.push("/admin/dashboard");
         } else if (res.user.role === "supervisor") {
           router.push("/dashboard");
         } else {
-          // fallback if new roles are added in the future
           router.push("/");
         }
       } else {
+        // show server-provided error message
         toast.error(res.message || "❌ Login failed, please try again");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Login error:", err);
-      toast.error("🚨 Something went wrong. Please try again.");
+      toast.error(err?.message || "🚨 Something went wrong. Please try again.");
     }
   };
 
@@ -59,10 +59,7 @@ export default function LoginPage() {
         <h2 className="text-2xl font-bold text-center mb-4">Login</h2>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <label
-              htmlFor="username"
-              className="block text-sm mb-1 font-medium"
-            >
+            <label htmlFor="username" className="block text-sm mb-1 font-medium">
               Username
             </label>
             <input
@@ -78,10 +75,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label
-              htmlFor="password"
-              className="block text-sm mb-1 font-medium"
-            >
+            <label htmlFor="password" className="block text-sm mb-1 font-medium">
               Password
             </label>
             <input
@@ -105,12 +99,12 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="mt-4 text-sm text-center text-gray-700">
+        {/* <p className="mt-4 text-sm text-center text-gray-700">
           Don&apos;t have an account?{" "}
           <Link href="/register" className="text-indigo-600 hover:underline">
             Register here
           </Link>
-        </p>
+        </p> */}
       </div>
     </div>
   );
