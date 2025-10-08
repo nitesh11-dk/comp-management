@@ -68,7 +68,7 @@ export default function EmployeeManagement() {
   }
 
   return (
-    <div className="w-full px-2 sm:px-4">
+    <div className="w-full  sm:px-4">
       <h2 className="text-xl font-bold mb-4">Employee Management</h2>
 
       {/* Search Section */}
