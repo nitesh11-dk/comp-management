@@ -13,6 +13,15 @@ export async function middleware(req: Request) {
   const isAuthPage =
     pathname.startsWith("/login") || pathname.startsWith("/register");
 
+  // Handle root route "/" for logged-in users
+  if (pathname === "/" && token) {
+    const payload = await getUserFromToken(token);
+    if (payload) {
+      const redirectUrl = payload.role === "admin" ? "/admin" : "/dashboard";
+      return NextResponse.redirect(new URL(redirectUrl, req.url));
+    }
+  }
+
   // If route is protected
   if (isProtectedRoute) {
     if (!token) {
@@ -54,5 +63,5 @@ export async function middleware(req: Request) {
 
 // ✅ Limit middleware to specific paths
 export const config = {
-  matcher: ["/login", "/register", "/dashboard/:path*", "/admin/:path*"],
+  matcher: ["/", "/login", "/register", "/dashboard/:path*", "/admin/:path*"],
 };
