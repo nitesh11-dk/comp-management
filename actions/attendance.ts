@@ -69,7 +69,7 @@ export async function scanEmployee(input: ScanAttendanceInput): Promise<ScanResu
 // 🔹 Calculate Work Logs
 // ================================
 export async function calculateWorkLogs(entries: IAttendanceEntry[], hourlyRate: number = 100) {
-    const workLogMap: Record<string, { totalHours: number; departmentId: string; date: string }> = {};
+    const workLogMap: Record<string, { totalMinutes: number; departmentId: string; date: string }> = {};
     const sortedEntries = [...entries].sort(
         (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
@@ -82,34 +82,41 @@ export async function calculateWorkLogs(entries: IAttendanceEntry[], hourlyRate:
         if (entry.scanType === "in") {
             lastIn = entry;
         } else if (entry.scanType === "out" && lastIn && !entry.autoClosed) {
-            // Compare departmentId as string
             const lastDeptId = lastIn.departmentId.toString();
             const currentDeptId = entry.departmentId.toString();
 
             if (lastDeptId === currentDeptId) {
-                const duration = Math.round(
-                    ((entryTime.getTime() - new Date(lastIn.timestamp).getTime()) / (1000 * 60 * 60)) * 100
-                ) / 100;
+                const durationMinutes = Math.round(
+                    (entryTime.getTime() - new Date(lastIn.timestamp).getTime()) / (1000 * 60)
+                );
 
                 const dateKey = new Date(lastIn.timestamp).toLocaleDateString("en-CA");
                 const key = `${currentDeptId}_${dateKey}`;
 
                 if (!workLogMap[key]) {
-                    workLogMap[key] = { totalHours: 0, departmentId: currentDeptId, date: dateKey };
+                    workLogMap[key] = { totalMinutes: 0, departmentId: currentDeptId, date: dateKey };
                 }
-                workLogMap[key].totalHours += duration;
+                workLogMap[key].totalMinutes += durationMinutes;
                 lastIn = null;
             }
         }
     }
 
-    return Object.values(workLogMap).map(v => ({
-        date: new Date(v.date),
-        departmentId: v.departmentId, // already string
-        totalHours: v.totalHours,
-        salaryEarned: Math.round(v.totalHours * hourlyRate * 100) / 100,
-    }));
+    return Object.values(workLogMap).map(v => {
+        const hours = Math.floor(v.totalMinutes / 60);
+        const minutes = v.totalMinutes % 60;
+        const totalHoursDecimal = Math.round((v.totalMinutes / 60) * 100) / 100;
+        return {
+            date: new Date(v.date),
+            departmentId: v.departmentId,
+            totalHours: totalHoursDecimal,
+            hours,
+            minutes,
+            salaryEarned: Math.round(totalHoursDecimal * hourlyRate * 100) / 100,
+        };
+    });
 }
+
 
 // ================================
 // 🔹 Add test entries
@@ -119,35 +126,84 @@ export async function addTestEntries(employeeId: mongoose.Types.ObjectId) {
     if (!wallet) throw new Error("Attendance wallet not found");
 
     const testEntries: IAttendanceEntry[] = [
+        // October
         {
-            timestamp: new Date("2025-10-01T09:00:00Z"),
+            timestamp: new Date("2025-10-04T09:15:00Z"), // 9:15 AM
             scanType: "in",
             departmentId: wallet.entries[0]?.departmentId || new mongoose.Types.ObjectId(),
             scannedBy: wallet.entries[0]?.scannedBy || new mongoose.Types.ObjectId(),
             autoClosed: false
         },
         {
-            timestamp: new Date("2025-10-01T14:00:00Z"),
+            timestamp: new Date("2025-10-04T19:10:00Z"), // 10 hrs 55 mins
             scanType: "out",
             departmentId: wallet.entries[0]?.departmentId || new mongoose.Types.ObjectId(),
             scannedBy: wallet.entries[0]?.scannedBy || new mongoose.Types.ObjectId(),
             autoClosed: false
         },
         {
-            timestamp: new Date("2025-10-02T08:30:00Z"),
+            timestamp: new Date("2025-10-08T08:45:00Z"), // 8:45 AM
             scanType: "in",
             departmentId: wallet.entries[0]?.departmentId || new mongoose.Types.ObjectId(),
             scannedBy: wallet.entries[0]?.scannedBy || new mongoose.Types.ObjectId(),
             autoClosed: false
         },
         {
-            timestamp: new Date("2025-10-02T14:30:00Z"),
+            timestamp: new Date("2025-10-08T12:50:00Z"), // 4 hrs 5 mins
             scanType: "out",
             departmentId: wallet.entries[0]?.departmentId || new mongoose.Types.ObjectId(),
             scannedBy: wallet.entries[0]?.scannedBy || new mongoose.Types.ObjectId(),
             autoClosed: false
         },
+
+        // September
+        {
+            timestamp: new Date("2025-09-10T08:40:00Z"), // 8:40 AM
+            scanType: "in",
+            departmentId: wallet.entries[0]?.departmentId || new mongoose.Types.ObjectId(),
+            scannedBy: wallet.entries[0]?.scannedBy || new mongoose.Types.ObjectId(),
+            autoClosed: false
+        },
+        {
+            timestamp: new Date("2025-09-10T16:30:00Z"), // 7 hrs 50 mins
+            scanType: "out",
+            departmentId: wallet.entries[0]?.departmentId || new mongoose.Types.ObjectId(),
+            scannedBy: wallet.entries[0]?.scannedBy || new mongoose.Types.ObjectId(),
+            autoClosed: false
+        },
+        {
+            timestamp: new Date("2025-09-15T09:10:00Z"), // 9:10 AM
+            scanType: "in",
+            departmentId: wallet.entries[0]?.departmentId || new mongoose.Types.ObjectId(),
+            scannedBy: wallet.entries[0]?.scannedBy || new mongoose.Types.ObjectId(),
+            autoClosed: false
+        },
+        {
+            timestamp: new Date("2025-09-15T14:20:00Z"), // 5 hrs 10 mins
+            scanType: "out",
+            departmentId: wallet.entries[0]?.departmentId || new mongoose.Types.ObjectId(),
+            scannedBy: wallet.entries[0]?.scannedBy || new mongoose.Types.ObjectId(),
+            autoClosed: false
+        },
+
+        // August
+        {
+            timestamp: new Date("2025-08-20T10:05:00Z"), // 10:05 AM
+            scanType: "in",
+            departmentId: wallet.entries[0]?.departmentId || new mongoose.Types.ObjectId(),
+            scannedBy: wallet.entries[0]?.scannedBy || new mongoose.Types.ObjectId(),
+            autoClosed: false
+        },
+        {
+            timestamp: new Date("2025-08-20T18:15:00Z"), // 8 hrs 10 mins
+            scanType: "out",
+            departmentId: wallet.entries[0]?.departmentId || new mongoose.Types.ObjectId(),
+            scannedBy: wallet.entries[0]?.scannedBy || new mongoose.Types.ObjectId(),
+            autoClosed: false
+        }
     ];
+
+
 
     wallet.entries.push(...testEntries);
     await wallet.save();

@@ -1,4 +1,3 @@
-// app/admin/dashboard/employee/[id]/page.tsx
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -34,6 +33,8 @@ interface Department {
 interface WorkLog {
   date: Date;
   totalHours: number;
+  hours: number;
+  minutes: number;
   salaryEarned: number;
 }
 
@@ -161,7 +162,7 @@ export default function EmployeeDetailPage() {
               {workLogs.length ? workLogs.map((log, idx) => (
                 <tr key={idx} className="hover:bg-gray-50">
                   <td className="border px-4 py-2">{log.date.toISOString().split("T")[0]}</td>
-                  <td className="border px-4 py-2">{log.totalHours} hrs</td>
+                  <td className="border px-4 py-2">{log.hours} hrs {log.minutes} mins</td>
                   <td className="border px-4 py-2">₹{log.salaryEarned}</td>
                 </tr>
               )) : (
