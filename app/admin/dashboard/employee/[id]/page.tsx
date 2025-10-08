@@ -103,8 +103,24 @@ export default function EmployeeDetailPage() {
 
   if (!employee) return <div className="p-6">Loading...</div>;
 
+  // Group logs by month
+  const groupedLogs: Record<string, WorkLog[]> = {};
+  workLogs.forEach(log => {
+    const monthName = log.date.toLocaleString("default", { month: "long", year: "numeric" });
+    if (!groupedLogs[monthName]) groupedLogs[monthName] = [];
+    groupedLogs[monthName].push(log);
+  });
+
+  // Sort months by latest first
+  const sortedMonths = Object.keys(groupedLogs).sort((a, b) => {
+    const dateA = new Date(groupedLogs[a][0].date);
+    const dateB = new Date(groupedLogs[b][0].date);
+    return dateB.getTime() - dateA.getTime();
+  });
+
   return (
     <div className="p-6 space-y-6">
+      {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="outline" onClick={() => router.back()} size="sm">
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -113,6 +129,7 @@ export default function EmployeeDetailPage() {
         <h1 className="text-2xl font-bold">{employee.name}</h1>
       </div>
 
+      {/* Employee Info & Barcode */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <CardHeader><CardTitle>Employee Info</CardTitle></CardHeader>
@@ -147,35 +164,36 @@ export default function EmployeeDetailPage() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader><CardTitle>Daily Work Logs</CardTitle></CardHeader>
-        <CardContent className="overflow-x-auto">
-          <table className="min-w-full border border-gray-200">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="border px-4 py-2 text-left">Date</th>
-                <th className="border px-4 py-2 text-left">Total Hours</th>
-                <th className="border px-4 py-2 text-left">Salary Earned</th>
-              </tr>
-            </thead>
-            <tbody>
-              {workLogs.length ? workLogs.map((log, idx) => (
-                <tr key={idx} className="hover:bg-gray-50">
-                  <td className="border px-4 py-2">{log.date.toISOString().split("T")[0]}</td>
-                  <td className="border px-4 py-2">{log.hours} hrs {log.minutes} mins</td>
-                  <td className="border px-4 py-2">₹{log.salaryEarned}</td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan={3} className="border px-4 py-2 text-center">
-                    No work logs available
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
+      {/* Work Logs by Month */}
+      {sortedMonths.map((month, idx) => (
+        <div key={idx} className="flex flex-col items-center space-y-2">
+          <h2 className="text-xl font-semibold mt-4">{month}</h2>
+          <Card className="w-full max-w-5xl shadow-lg">
+            <CardContent className="overflow-x-auto">
+              <table className="min-w-full border border-gray-200 mx-auto text-sm">
+                <thead>
+                  <tr className="bg-gray-100 text-gray-700 uppercase">
+                    <th className="border px-4 py-2 text-left">Date</th>
+                    <th className="border px-4 py-2 text-left">Total Hours</th>
+                    <th className="border px-4 py-2 text-left">Salary Earned</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {groupedLogs[month]
+                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) // latest first
+                    .map((log, i) => (
+                      <tr key={i} className="hover:bg-gray-50 odd:bg-white even:bg-gray-50 transition-colors">
+                        <td className="border px-4 py-2">{log.date.toISOString().split("T")[0]}</td>
+                        <td className="border px-4 py-2">{log.hours} hrs {log.minutes ? log.minutes + " mins" : " "} </td>
+                        <td className="border px-4 py-2">₹{log.salaryEarned}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+        </div>
+      ))}
     </div>
   );
 }
