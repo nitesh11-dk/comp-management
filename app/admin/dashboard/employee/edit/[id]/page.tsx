@@ -7,148 +7,141 @@ import { toast } from "sonner";
 import { updateEmployee, getEmployeeById } from "@/actions/employeeActions";
 import { getDepartments } from "@/actions/department";
 import { getShiftTypes } from "@/actions/shiftType";
+import { getCycleTimings } from "@/actions/cycleTimings";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Trash2, ChevronLeft } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { ChevronLeft, Trash2 } from "lucide-react";
 
 export default function EditEmployeePage() {
     const router = useRouter();
     const params = useParams();
     const employeeId = params.id;
 
+    const [departments, setDepartments] = useState<any[]>([]);
+    const [shiftTypes, setShiftTypes] = useState<any[]>([]);
+    const [cycleTimings, setCycleTimings] = useState<any[]>([]);
+
+    const [loading, setLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const [message, setMessage] = useState("");
+    const [messageType, setMessageType] = useState<"success" | "error">("success");
+
     const [formData, setFormData] = useState({
         name: "",
         aadhaarNumber: "",
         mobile: "",
         departmentId: "",
-        shiftTypeId: "",
+        shiftTypeId: null as string | null,
+        cycleTimingId: null as string | null,
         pfId: "",
+        pfActive: true,
         esicId: "",
+        esicActive: true,
+        panNumber: "",
+        dob: "",
+        currentAddress: "",
+        permanentAddress: "",
+        bankAccountNumber: "",
+        ifscCode: "",
         hourlyRate: "",
     });
 
-    const [isSubmitting, setIsSubmitting] = useState(false);
-
-    const [departments, setDepartments] = useState<any[]>([]);
-    const [shiftTypes, setShiftTypes] = useState<any[]>([]);
-
-    const [loading, setLoading] = useState(true);
-    const [message, setMessage] = useState("");
-    const [messageType, setMessageType] = useState<"success" | "error">("success");
-
-    const [employee, setEmployee] = useState<any>(null);
-
+    // ------------------ LOAD EMPLOYEE ------------------
     useEffect(() => {
         if (!employeeId) return;
 
-        const loadData = async () => {
+        const load = async () => {
             try {
-                const [deptRes, shiftRes, empRes] = await Promise.all([
+                const [deptRes, shiftRes, cycleRes, empRes] = await Promise.all([
                     getDepartments(),
                     getShiftTypes(),
+                    getCycleTimings(),
                     getEmployeeById(employeeId),
                 ]);
 
                 if (deptRes.success) setDepartments(deptRes.data);
-                else toast.error("Failed to load departments");
-
                 if (shiftRes.success) setShiftTypes(shiftRes.data);
-                else toast.error("Failed to load shifts");
+                if (cycleRes.success) setCycleTimings(cycleRes.data);
 
                 if (empRes.success && empRes.data) {
                     const emp = empRes.data;
-                    setEmployee(emp);
 
                     setFormData({
                         name: emp.name,
                         aadhaarNumber: emp.aadhaarNumber,
                         mobile: emp.mobile,
                         departmentId: emp.departmentId,
-                        shiftTypeId: emp.shiftTypeId,
+                        shiftTypeId: emp.shiftTypeId ?? null,
+                        cycleTimingId: emp.cycleTimingId ?? null,
                         pfId: emp.pfId || "",
+                        pfActive: emp.pfActive,
                         esicId: emp.esicId || "",
+                        esicActive: emp.esicActive,
+                        panNumber: emp.panNumber || "",
+                        dob: emp.dob ? emp.dob.split("T")[0] : "",
+                        currentAddress: emp.currentAddress || "",
+                        permanentAddress: emp.permanentAddress || "",
+                        bankAccountNumber: emp.bankAccountNumber || "",
+                        ifscCode: emp.ifscCode || "",
                         hourlyRate: String(emp.hourlyRate),
                     });
-                } else {
-                    toast.error("Employee not found");
-                    router.back();
                 }
-            } catch (err) {
-                toast.error("Error loading data");
+            } catch (error) {
+                toast.error("Error loading employee");
             } finally {
                 setLoading(false);
             }
         };
 
-        loadData();
-    }, [employeeId, router]);
+        load();
+    }, [employeeId]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    // ------------------ SUBMIT ------------------
+    const handleSubmit = async (e: any) => {
         e.preventDefault();
-        if (!employeeId) return;
-
         setIsSubmitting(true);
 
         try {
-            const res = await updateEmployee(employeeId, {
+            const payload = {
                 ...formData,
                 hourlyRate: Number(formData.hourlyRate),
-            });
+                dob: formData.dob ? new Date(formData.dob) : null,
+                shiftTypeId: formData.shiftTypeId,
+                cycleTimingId: formData.cycleTimingId,
+            };
+
+            const res = await updateEmployee(employeeId, payload);
 
             if (res.success) {
-                setMessage("Employee updated successfully!");
+                setMessage("Employee updated successfully");
                 setMessageType("success");
             } else {
                 setMessage(res.message || "Update failed");
                 setMessageType("error");
             }
         } catch (err) {
-            setMessage("Error updating employee");
+            setMessage("Unexpected error");
             setMessageType("error");
-        } finally {
-            setIsSubmitting(false);
         }
-    };
 
-    const handleReset = () => {
-        if (!employee) return;
-
-        setFormData({
-            name: employee.name,
-            aadhaarNumber: employee.aadhaarNumber,
-            mobile: employee.mobile,
-            departmentId: employee.departmentId,
-            shiftTypeId: employee.shiftTypeId,
-            pfId: employee.pfId || "",
-            esicId: employee.esicId || "",
-            hourlyRate: String(employee.hourlyRate),
-        });
-
-        setMessage("");
+        setIsSubmitting(false);
     };
 
     if (loading) return <div className="p-6">Loading...</div>;
 
     return (
-        <div className="min-h-screen bg-background p-4">
+        <div className="min-h-screen p-4">
             <div className="max-w-4xl mx-auto space-y-6">
-                <Button
-                    variant="outline"
-                    onClick={() => router.back()}
-                    className="flex items-center gap-2"
-                >
-                    <ChevronLeft className="h-4 w-4" /> Back
+
+                <Button variant="outline" onClick={() => router.back()}>
+                    <ChevronLeft className="w-4 h-4" /> Back
                 </Button>
 
                 <h1 className="text-2xl font-bold">Edit Employee</h1>
@@ -159,127 +152,156 @@ export default function EditEmployeePage() {
                     </CardHeader>
 
                     <CardContent>
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            {/* Name */}
-                            <div>
-                                <Label>Full Name *</Label>
-                                <Input
-                                    value={formData.name}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, name: e.target.value })
-                                    }
-                                    required
-                                />
+                        <form className="space-y-4" onSubmit={handleSubmit}>
+
+                            {/* BASIC INFO */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                                <InputField label="Name" value={formData.name}
+                                    onChange={(v) => setFormData({ ...formData, name: v })} />
+
+                                <InputField label="Aadhaar" value={formData.aadhaarNumber}
+                                    onChange={(v) => setFormData({ ...formData, aadhaarNumber: v })} />
+
+                                <InputField label="Mobile" value={formData.mobile}
+                                    onChange={(v) => setFormData({ ...formData, mobile: v })} />
+
+                                <InputField label="PAN" value={formData.panNumber}
+                                    onChange={(v) => setFormData({ ...formData, panNumber: v })} />
+
+                                <InputField type="date" label="DOB" value={formData.dob}
+                                    onChange={(v) => setFormData({ ...formData, dob: v })} />
+
+                                <InputField label="Current Address" value={formData.currentAddress}
+                                    onChange={(v) => setFormData({ ...formData, currentAddress: v })} />
+
+                                <InputField label="Permanent Address" value={formData.permanentAddress}
+                                    onChange={(v) => setFormData({ ...formData, permanentAddress: v })} />
+
+                                <InputField label="Bank Account No." value={formData.bankAccountNumber}
+                                    onChange={(v) => setFormData({ ...formData, bankAccountNumber: v })} />
+
+                                <InputField label="IFSC Code" value={formData.ifscCode}
+                                    onChange={(v) => setFormData({ ...formData, ifscCode: v })} />
+
                             </div>
 
-                            {/* Aadhaar */}
-                            <div>
-                                <Label>Aadhaar *</Label>
-                                <Input
-                                    value={formData.aadhaarNumber}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, aadhaarNumber: e.target.value })
-                                    }
-                                    required
-                                />
+                            {/* PF / ESIC */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-md">
+                                <div>
+                                    <Label>PF ID</Label>
+                                    <Input value={formData.pfId}
+                                        onChange={(e) => setFormData({ ...formData, pfId: e.target.value })} />
+                                    <div className="flex items-center mt-2">
+                                        <Switch checked={formData.pfActive}
+                                            onCheckedChange={(v) => setFormData({ ...formData, pfActive: v })} />
+                                        <span className="ml-2 text-sm">PF Active</span>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <Label>ESIC ID</Label>
+                                    <Input value={formData.esicId}
+                                        onChange={(e) => setFormData({ ...formData, esicId: e.target.value })} />
+                                    <div className="flex items-center mt-2">
+                                        <Switch checked={formData.esicActive}
+                                            onCheckedChange={(v) => setFormData({ ...formData, esicActive: v })} />
+                                        <span className="ml-2 text-sm">ESIC Active</span>
+                                    </div>
+                                </div>
                             </div>
 
-                            {/* Mobile */}
-                            <div>
-                                <Label>Mobile *</Label>
-                                <Input
-                                    value={formData.mobile}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, mobile: e.target.value })
-                                    }
-                                    required
-                                />
-                            </div>
+                            {/* Department Select */}
+                            <SelectField
+                                label="Department"
+                                value={formData.departmentId}
+                                items={departments}
+                                onChange={(v) => setFormData({ ...formData, departmentId: v })}
+                                display={(x) => x.name}
+                            />
 
-                            {/* Department */}
-                            <div>
-                                <Label>Department *</Label>
-                                <Select
-                                    value={formData.departmentId}
-                                    onValueChange={(value) =>
-                                        setFormData({ ...formData, departmentId: value })
-                                    }
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select Department" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {departments.map((dept) => (
-                                            <SelectItem key={dept.id} value={dept.id}>
-                                                {dept.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                            {/* Shift Select */}
+                            <SelectField
+                                label="Shift Type"
+                                value={formData.shiftTypeId ?? "null"}
+                                items={shiftTypes}
+                                onChange={(v) => setFormData({ ...formData, shiftTypeId: v === "null" ? null : v })}
+                                display={(x) => `${x.name} — ${x.totalHours} hrs`}
+                                allowNull
+                            />
 
-                            {/* Shift Type */}
-                            <div>
-                                <Label>Shift Type *</Label>
-                                <Select
-                                    value={formData.shiftTypeId}
-                                    onValueChange={(value) =>
-                                        setFormData({ ...formData, shiftTypeId: value })
-                                    }
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select Shift" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {shiftTypes.map((shift) => (
-                                            <SelectItem key={shift.id} value={shift.id}>
-                                                {shift.name} — {shift.totalHours} Hrs
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                            {/* Cycle Select */}
+                            <SelectField
+                                label="Cycle Timing"
+                                value={formData.cycleTimingId ?? "null"}
+                                items={cycleTimings}
+                                onChange={(v) => setFormData({ ...formData, cycleTimingId: v === "null" ? null : v })}
+                                display={(c) => `${c.name} (Start: ${c.startDay})`}
+                                allowNull
+                            />
 
                             {/* Hourly Rate */}
-                            <div>
-                                <Label>Hourly Rate *</Label>
-                                <Input
-                                    type="number"
-                                    value={formData.hourlyRate}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, hourlyRate: e.target.value })
-                                    }
-                                    required
-                                />
-                            </div>
+                            <InputField
+                                label="Hourly Rate"
+                                type="number"
+                                value={formData.hourlyRate}
+                                onChange={(v) => setFormData({ ...formData, hourlyRate: v })}
+                            />
 
-                            {/* Alerts */}
+                            {/* ALERT */}
                             {message && (
-                                <Alert
-                                    variant={messageType === "error" ? "destructive" : "default"}
-                                >
+                                <Alert variant={messageType === "error" ? "destructive" : "default"}>
                                     <AlertDescription>{message}</AlertDescription>
                                 </Alert>
                             )}
 
                             <div className="flex gap-2">
-                                <Button type="submit" disabled={isSubmitting} className="flex-1">
-                                    {isSubmitting ? "Updating..." : "Update Employee"}
+                                <Button className="flex-1" disabled={isSubmitting}>
+                                    {isSubmitting ? "Updating..." : "Update"}
                                 </Button>
 
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    className="flex-1"
-                                    onClick={handleReset}
-                                >
-                                    <Trash2 className="h-4 w-4 mr-2" /> Reset
+                                <Button type="button" variant="outline"
+                                    onClick={() => window.location.reload()}>
+                                    <Trash2 className="w-4 h-4" /> Reset
                                 </Button>
                             </div>
+
                         </form>
                     </CardContent>
                 </Card>
             </div>
+        </div>
+    );
+}
+
+/* ------------------ Input Field Component ------------------ */
+function InputField({ label, value, onChange, type = "text" }: any) {
+    return (
+        <div>
+            <Label>{label}</Label>
+            <Input type={type} value={value} onChange={(e) => onChange(e.target.value)} />
+        </div>
+    );
+}
+
+/* ------------------ Select Field Component ------------------ */
+function SelectField({ label, value, items, onChange, display, allowNull }: any) {
+    return (
+        <div>
+            <Label>{label}</Label>
+            <Select value={value} onValueChange={onChange}>
+                <SelectTrigger>
+                    <SelectValue placeholder={"Select " + label} />
+                </SelectTrigger>
+                <SelectContent>
+                    {allowNull && <SelectItem value="null">None</SelectItem>}
+                    {items.map((item: any) => (
+                        <SelectItem key={item.id} value={item.id}>
+                            {display(item)}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
         </div>
     );
 }

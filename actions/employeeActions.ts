@@ -3,7 +3,9 @@
 import prisma from "@/lib/prisma";
 import { ActionResponse } from "@/lib/types/types";
 
-// Utility: Generate Unique Employee Code
+// ----------------------------------------------------
+//    Generate Unique Employee Code
+// ----------------------------------------------------
 async function generateUniqueEmpCode(): Promise<string> {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -20,102 +22,193 @@ async function generateUniqueEmpCode(): Promise<string> {
     }
 }
 
-// Utility: Serialize Employee (because Prisma returns id in correct format)
+// ----------------------------------------------------
+//    Serialize Employee
+// ----------------------------------------------------
 function serializeEmployee(emp: any) {
     return {
         ...emp,
         createdAt: emp.createdAt?.toISOString(),
         updatedAt: emp.updatedAt?.toISOString(),
+        dob: emp.dob ? emp.dob.toISOString() : null,
     };
 }
 
-//
-// --------------------- CREATE EMPLOYEE ----------------------
-//
+// ----------------------------------------------------
+//    CREATE EMPLOYEE
+// ----------------------------------------------------
 export async function createEmployee(
     data: any
 ): Promise<ActionResponse<any>> {
     try {
-        // Validate Aadhaar
-        if (data.aadhaarNumber) {
-            if (!/^\d{12}$/.test(data.aadhaarNumber.toString())) {
-                return {
-                    success: false,
-                    message: "⚠️ Aadhaar number must be a 12-digit number",
-                };
-            }
-
-            const exists = await prisma.employee.findUnique({
-                where: { aadhaarNumber: data.aadhaarNumber.toString() },
-            });
-
-            if (exists)
-                return {
-                    success: false,
-                    message: "⚠️ Aadhaar number already exists",
-                };
+        // -------------------- VALIDATE NAME --------------------
+        if (!data.name || data.name.trim().length < 3) {
+            return {
+                success: false,
+                message: "⚠️ Name must be at least 3 characters",
+            };
         }
 
-        // Validate PF
+        // -------------------- VALIDATE AADHAAR --------------------
+        if (!/^\d{12}$/.test(String(data.aadhaarNumber))) {
+            return {
+                success: false,
+                message: "⚠️ Aadhaar must be a 12-digit number",
+            };
+        }
+
+        const aadhaarExists = await prisma.employee.findUnique({
+            where: { aadhaarNumber: String(data.aadhaarNumber) },
+        });
+        if (aadhaarExists) {
+            return {
+                success: false,
+                message: "⚠️ Aadhaar already exists",
+            };
+        }
+
+        // -------------------- VALIDATE MOBILE --------------------
+        if (!/^\d{10}$/.test(String(data.mobile))) {
+            return {
+                success: false,
+                message: "⚠️ Mobile must be a 10-digit number",
+            };
+        }
+
+        // -------------------- VALIDATE PF --------------------
         if (data.pfId) {
-            const exists = await prisma.employee.findUnique({
+            const pfExists = await prisma.employee.findUnique({
                 where: { pfId: data.pfId },
             });
-            if (exists)
+            if (pfExists) {
                 return {
                     success: false,
                     message: "⚠️ PF ID already exists",
                 };
+            }
         }
 
-        // Validate ESIC
+        // -------------------- VALIDATE ESIC --------------------
         if (data.esicId) {
-            const exists = await prisma.employee.findUnique({
+            const esicExists = await prisma.employee.findUnique({
                 where: { esicId: data.esicId },
             });
-            if (exists)
+            if (esicExists) {
                 return {
                     success: false,
                     message: "⚠️ ESIC ID already exists",
                 };
+            }
         }
 
-        // Validate mobile
-        if (data.mobile) {
-            if (!/^\d{10}$/.test(data.mobile.toString())) {
+        // -------------------- VALIDATE PAN --------------------
+        if (data.panNumber) {
+            const panExists = await prisma.employee.findUnique({
+                where: { panNumber: data.panNumber },
+            });
+            if (panExists) {
                 return {
                     success: false,
-                    message: "⚠️ Mobile number must be a 10-digit number",
+                    message: "⚠️ PAN Number already exists",
                 };
             }
         }
 
-        // Generate empCode
+        // -------------------- VALIDATE SHIFT TYPE --------------------
+        if (data.shiftTypeId) {
+            const shift = await prisma.shiftType.findUnique({
+                where: { id: data.shiftTypeId },
+            });
+            if (!shift) {
+                return {
+                    success: false,
+                    message: "⚠️ Invalid shift type selected",
+                };
+            }
+        }
+
+        // -------------------- VALIDATE DEPARTMENT --------------------
+        const department = await prisma.department.findUnique({
+            where: { id: data.departmentId },
+        });
+        if (!department) {
+            return {
+                success: false,
+                message: "⚠️ Invalid department selected",
+            };
+        }
+
+        // -------------------- VALIDATE CYCLE TIMING --------------------
+        if (data.cycleTimingId) {
+            const cycle = await prisma.cycleTiming.findUnique({
+                where: { id: data.cycleTimingId },
+            });
+            if (!cycle) {
+                return {
+                    success: false,
+                    message: "⚠️ Invalid cycle timing selected",
+                };
+            }
+        }
+
+        // -------------------- VALIDATE HOURLY RATE --------------------
+        if (!data.hourlyRate || Number(data.hourlyRate) <= 0) {
+            return {
+                success: false,
+                message: "⚠️ Hourly rate must be greater than 0",
+            };
+        }
+
+        // -------------------- GENERATE EMP CODE --------------------
         const empCode = await generateUniqueEmpCode();
 
-        // Convert numeric fields to string (important)
+        // -------------------- CREATE EMPLOYEE --------------------
         const employee = await prisma.employee.create({
             data: {
                 empCode,
                 name: data.name,
+
+                aadhaarNumber: String(data.aadhaarNumber),
+                mobile: String(data.mobile),
+
                 pfId: data.pfId || null,
+                pfActive: data.pfActive ?? true,
+
                 esicId: data.esicId || null,
-                aadhaarNumber: data.aadhaarNumber.toString(),
-                mobile: data.mobile.toString(),
-                shiftType: data.shiftType,
-                hourlyRate: Number(data.hourlyRate ?? 100),
-                profileComplete: true,
+                esicActive: data.esicActive ?? true,
+
+                panNumber: data.panNumber || null,
+                dob: data.dob ? new Date(data.dob) : null,
+
+                currentAddress: data.currentAddress || null,
+                permanentAddress: data.permanentAddress || null,
+
+                bankAccountNumber: data.bankAccountNumber || null,
+                ifscCode: data.ifscCode || null,
+
+                hourlyRate: Number(data.hourlyRate),
+
                 departmentId: data.departmentId,
+                shiftTypeId: data.shiftTypeId || null,
+                cycleTimingId: data.cycleTimingId || null,
+
+                profileComplete: true,
             },
+        });
+
+        // -------------------- CREATE ATTENDANCE WALLET --------------------
+        await prisma.attendanceWallet.create({
+            data: { employeeId: employee.id },
         });
 
         return {
             success: true,
-            message: "✅ Employee created successfully",
+            message: "🎉 Employee created successfully",
             data: serializeEmployee(employee),
         };
     } catch (error: any) {
         console.error("❌ Create Employee Error:", error);
+
         return {
             success: false,
             message: error.message || "Failed to create employee",
@@ -123,9 +216,9 @@ export async function createEmployee(
     }
 }
 
-//
-// --------------------- GET ALL EMPLOYEES ----------------------
-//
+// ----------------------------------------------------
+//    GET EMPLOYEES
+// ----------------------------------------------------
 export async function getEmployees(): Promise<ActionResponse<any[]>> {
     try {
         const employees = await prisma.employee.findMany({
@@ -134,11 +227,10 @@ export async function getEmployees(): Promise<ActionResponse<any[]>> {
 
         return {
             success: true,
-            message: "Employees fetched successfully",
             data: employees.map(serializeEmployee),
+            message: "Employees fetched successfully",
         };
     } catch (error: any) {
-        console.error("❌ Get Employees Error:", error);
         return {
             success: false,
             message: error.message || "Failed to fetch employees",
@@ -147,27 +239,22 @@ export async function getEmployees(): Promise<ActionResponse<any[]>> {
     }
 }
 
-//
-// --------------------- GET SINGLE EMPLOYEE ----------------------
-//
-export async function getEmployeeById(
-    id: string
-): Promise<ActionResponse<any>> {
+// ----------------------------------------------------
+//    GET SINGLE EMPLOYEE
+// ----------------------------------------------------
+export async function getEmployeeById(id: string): Promise<ActionResponse<any>> {
     try {
-        const employee = await prisma.employee.findUnique({
-            where: { id },
-        });
+        const employee = await prisma.employee.findUnique({ where: { id } });
 
-        if (!employee)
+        if (!employee) {
             return { success: false, message: "Employee not found" };
+        }
 
         return {
             success: true,
-            message: "Employee fetched successfully",
             data: serializeEmployee(employee),
         };
     } catch (error: any) {
-        console.error("❌ Get Employee Error:", error);
         return {
             success: false,
             message: error.message || "Failed to fetch employee",
@@ -175,19 +262,22 @@ export async function getEmployeeById(
     }
 }
 
-//
-// --------------------- UPDATE EMPLOYEE ----------------------
-//
+// ----------------------------------------------------
+//    UPDATE EMPLOYEE
+// ----------------------------------------------------
 export async function updateEmployee(
     id: string,
     updates: any
 ): Promise<ActionResponse<any>> {
     try {
-        // Convert numeric fields to string where needed
         if (updates.aadhaarNumber)
-            updates.aadhaarNumber = updates.aadhaarNumber.toString();
+            updates.aadhaarNumber = String(updates.aadhaarNumber);
 
-        if (updates.mobile) updates.mobile = updates.mobile.toString();
+        if (updates.mobile)
+            updates.mobile = String(updates.mobile);
+
+        if (updates.dob)
+            updates.dob = new Date(updates.dob);
 
         const employee = await prisma.employee.update({
             where: { id },
@@ -201,13 +291,9 @@ export async function updateEmployee(
         };
     } catch (error: any) {
         if (error.code === "P2025") {
-            return {
-                success: false,
-                message: "Employee not found",
-            };
+            return { success: false, message: "Employee not found" };
         }
 
-        console.error("❌ Update Employee Error:", error);
         return {
             success: false,
             message: error.message || "Failed to update employee",
@@ -215,16 +301,12 @@ export async function updateEmployee(
     }
 }
 
-//
-// --------------------- DELETE EMPLOYEE ----------------------
-//
-export async function deleteEmployee(
-    id: string
-): Promise<ActionResponse> {
+// ----------------------------------------------------
+//    DELETE EMPLOYEE
+// ----------------------------------------------------
+export async function deleteEmployee(id: string): Promise<ActionResponse> {
     try {
-        await prisma.employee.delete({
-            where: { id },
-        });
+        await prisma.employee.delete({ where: { id } });
 
         return {
             success: true,
@@ -232,13 +314,9 @@ export async function deleteEmployee(
         };
     } catch (error: any) {
         if (error.code === "P2025") {
-            return {
-                success: false,
-                message: "Employee not found",
-            };
+            return { success: false, message: "Employee not found" };
         }
 
-        console.error("❌ Delete Employee Error:", error);
         return {
             success: false,
             message: error.message || "Failed to delete employee",

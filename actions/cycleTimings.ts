@@ -1,0 +1,205 @@
+"use server";
+
+import prisma from "@/lib/prisma";
+import { ActionResponse } from "@/lib/types/types";
+
+// -------------------------------------------
+// UTIL: SERIALIZE
+// -------------------------------------------
+function serializeCycleTiming(ct: any) {
+    return {
+        ...ct,
+        createdAt: ct.createdAt?.toISOString(),
+        updatedAt: ct.updatedAt?.toISOString(),
+    };
+}
+
+// -------------------------------------------
+// CREATE CYCLE TIMING
+// -------------------------------------------
+export async function createCycleTiming(data: {
+    name: string;
+    startDay: number;
+    lengthDays?: number;
+    description?: string;
+}): Promise<ActionResponse<any>> {
+    try {
+        // ---------------- VALIDATIONS ----------------
+
+        if (!data.name || data.name.trim().length < 2) {
+            return { success: false, message: "⚠️ Name is too short" };
+        }
+
+        if (!data.startDay || data.startDay < 1 || data.startDay > 28) {
+            return {
+                success: false,
+                message: "⚠️ startDay must be between 1 and 28",
+            };
+        }
+
+        const length = data.lengthDays ?? 30;
+        if (length < 1 || length > 31) {
+            return {
+                success: false,
+                message: "⚠️ lengthDays must be between 1 and 31",
+            };
+        }
+
+        // Check duplicate name
+        const exists = await prisma.cycleTiming.findUnique({
+            where: { name: data.name },
+        });
+        if (exists) {
+            return {
+                success: false,
+                message: "⚠️ Cycle Timing name already exists",
+            };
+        }
+
+        // ---------------- CREATE ----------------
+
+        const cycle = await prisma.cycleTiming.create({
+            data: {
+                name: data.name,
+                startDay: data.startDay,
+                lengthDays: length,
+                description: data.description || null,
+            },
+        });
+
+        return {
+            success: true,
+            message: "Cycle timing created successfully",
+            data: serializeCycleTiming(cycle),
+        };
+    } catch (error: any) {
+        console.error("❌ Create CycleTiming Error:", error);
+        return {
+            success: false,
+            message: error.message || "Failed to create cycle timing",
+        };
+    }
+}
+
+// -------------------------------------------
+// GET ALL CYCLE TIMINGS
+// -------------------------------------------
+export async function getCycleTimings(): Promise<ActionResponse<any[]>> {
+    try {
+        const cycles = await prisma.cycleTiming.findMany({
+            orderBy: { createdAt: "desc" },
+        });
+
+        return {
+            success: true,
+            data: cycles.map(serializeCycleTiming),
+            message: "Cycle timings fetched",
+        };
+    } catch (error: any) {
+        console.error("❌ Get CycleTimings Error:", error);
+        return {
+            success: false,
+            message: error.message || "Failed to fetch cycle timings",
+            data: [],
+        };
+    }
+}
+
+// -------------------------------------------
+// GET SINGLE CYCLE TIMING
+// -------------------------------------------
+export async function getCycleTimingById(
+    id: string
+): Promise<ActionResponse<any>> {
+    try {
+        const cycle = await prisma.cycleTiming.findUnique({
+            where: { id },
+        });
+
+        if (!cycle) return { success: false, message: "Cycle timing not found" };
+
+        return {
+            success: true,
+            data: serializeCycleTiming(cycle),
+        };
+    } catch (error: any) {
+        console.error("❌ Get CycleTiming Error:", error);
+        return { success: false, message: error.message };
+    }
+}
+
+// -------------------------------------------
+// UPDATE CYCLE TIMING
+// -------------------------------------------
+export async function updateCycleTiming(
+    id: string,
+    updates: any
+): Promise<ActionResponse<any>> {
+    try {
+        // VALIDATION
+        if (updates.startDay) {
+            if (updates.startDay < 1 || updates.startDay > 28) {
+                return {
+                    success: false,
+                    message: "⚠️ startDay must be between 1 and 28",
+                };
+            }
+        }
+
+        if (updates.lengthDays) {
+            if (updates.lengthDays < 1 || updates.lengthDays > 31) {
+                return {
+                    success: false,
+                    message: "⚠️ lengthDays must be 1–31",
+                };
+            }
+        }
+
+        // Update
+        const cycle = await prisma.cycleTiming.update({
+            where: { id },
+            data: updates,
+        });
+
+        return {
+            success: true,
+            message: "Cycle timing updated",
+            data: serializeCycleTiming(cycle),
+        };
+    } catch (error: any) {
+        if (error.code === "P2025")
+            return { success: false, message: "Cycle timing not found" };
+
+        console.error("❌ Update CycleTiming Error:", error);
+        return {
+            success: false,
+            message: error.message || "Failed to update cycle timing",
+        };
+    }
+}
+
+// -------------------------------------------
+// DELETE CYCLE TIMING
+// -------------------------------------------
+export async function deleteCycleTiming(
+    id: string
+): Promise<ActionResponse> {
+    try {
+        await prisma.cycleTiming.delete({
+            where: { id },
+        });
+
+        return {
+            success: true,
+            message: "Cycle timing deleted",
+        };
+    } catch (error: any) {
+        if (error.code === "P2025")
+            return { success: false, message: "Cycle timing not found" };
+
+        return {
+            success: false,
+            message: error.message || "Failed to delete cycle timing",
+        };
+    }
+}
