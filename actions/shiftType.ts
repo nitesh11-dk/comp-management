@@ -7,7 +7,13 @@ import { ActionResponse } from "@/lib/types/types";
  * Calculate total hours
  */
 function calculateTotalHours(start: Date, end: Date) {
-    const diffMs = end.getTime() - start.getTime();
+    let diffMs = end.getTime() - start.getTime();
+
+    // If negative → assume shift passes midnight (e.g., 22:00 → 06:00)
+    if (diffMs < 0) {
+        diffMs += 24 * 60 * 60 * 1000; // add 24 hours
+    }
+
     const hours = diffMs / (1000 * 60 * 60);
     return parseFloat(hours.toFixed(2));
 }
