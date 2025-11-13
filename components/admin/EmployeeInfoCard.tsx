@@ -24,7 +24,6 @@ export default function EmployeeInfoCard({ employee, department, shiftType, cycl
         link.click();
     };
 
-    // Format Time → HH:mm
     const formatTime = (dateStr: string) => {
         try {
             return new Date(dateStr).toISOString().slice(11, 16);
@@ -33,7 +32,6 @@ export default function EmployeeInfoCard({ employee, department, shiftType, cycl
         }
     };
 
-    // Date Format (DOB)
     const formatDate = (d: string) => {
         if (!d) return "N/A";
         return new Date(d).toLocaleDateString("en-IN");
@@ -41,6 +39,8 @@ export default function EmployeeInfoCard({ employee, department, shiftType, cycl
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+            {/* LEFT SIDE — PERSONAL INFO */}
             <Card>
                 <CardHeader>
                     <CardTitle>Employee Information</CardTitle>
@@ -49,14 +49,14 @@ export default function EmployeeInfoCard({ employee, department, shiftType, cycl
                 <CardContent className="space-y-2 text-sm">
 
                     {/* BASIC */}
-                    <p><strong>Emp Code:</strong> {employee.empCode}</p>
+                    <p><strong>Employee Code:</strong> {employee.empCode}</p>
                     <p><strong>Name:</strong> {employee.name}</p>
                     <p><strong>Mobile:</strong> {employee.mobile}</p>
                     <p><strong>Aadhaar:</strong> {employee.aadhaarNumber}</p>
                     <p><strong>PAN:</strong> {employee.panNumber || "N/A"}</p>
                     <p><strong>Date of Birth:</strong> {formatDate(employee.dob)}</p>
 
-                    {/* PF & ESIC */}
+                    {/* PF */}
                     <p>
                         <strong>PF ID:</strong> {employee.pfId || "N/A"}{" "}
                         <span className={`text-xs ml-2 ${employee.pfActive ? "text-green-600" : "text-red-600"}`}>
@@ -64,6 +64,7 @@ export default function EmployeeInfoCard({ employee, department, shiftType, cycl
                         </span>
                     </p>
 
+                    {/* ESIC */}
                     <p>
                         <strong>ESIC ID:</strong> {employee.esicId || "N/A"}{" "}
                         <span className={`text-xs ml-2 ${employee.esicActive ? "text-green-600" : "text-red-600"}`}>
@@ -75,14 +76,10 @@ export default function EmployeeInfoCard({ employee, department, shiftType, cycl
                     <p><strong>Current Address:</strong> {employee.currentAddress || "N/A"}</p>
                     <p><strong>Permanent Address:</strong> {employee.permanentAddress || "N/A"}</p>
 
-                    {/* BANK */}
-                    <p><strong>Bank A/C:</strong> {employee.bankAccountNumber || "N/A"}</p>
-                    <p><strong>IFSC:</strong> {employee.ifscCode || "N/A"}</p>
-
                     {/* DEPARTMENT */}
                     <p><strong>Department:</strong> {department?.name || "N/A"}</p>
 
-                    {/* SHIFT TYPE */}
+                    {/* SHIFT */}
                     <p>
                         <strong>Shift:</strong>{" "}
                         {shiftType
@@ -100,41 +97,34 @@ export default function EmployeeInfoCard({ employee, department, shiftType, cycl
                             : "N/A"}
                     </p>
 
-                    {/* ADVANCE (Json array) */}
-                    <div>
-                        <strong>Advance Items:</strong>
-                        <ul className="list-disc ml-6 mt-1">
-                            {Array.isArray(employee.advance) && employee.advance.length > 0 ? (
-                                employee.advance.map((item: any, i: number) => (
-                                    <li key={i}>
-                                        {item.item} — {item.amount ? `₹${item.amount}` : "No default amount"}
-                                    </li>
-                                ))
-                            ) : (
-                                <li>No advance items</li>
-                            )}
-                        </ul>
-                    </div>
-
                     {/* HOURLY RATE */}
                     <p><strong>Hourly Rate:</strong> ₹{employee.hourlyRate}</p>
                 </CardContent>
             </Card>
 
-            {/* BARCODE CARD */}
+            {/* RIGHT SIDE — BANK + DOWNLOAD */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Barcode</CardTitle>
+                    <CardTitle>Bank & Salary Info</CardTitle>
                 </CardHeader>
 
-                <CardContent className="flex flex-col items-center gap-4">
-                    <div ref={barcodeRef} className="p-4 bg-white">
-                        <Barcode value={employee.empCode} height={60} fontSize={14} />
+                <CardContent className="space-y-4 text-sm">
+
+                    <p><strong>Bank Account Number:</strong> {employee.bankAccountNumber || "N/A"}</p>
+                    <p><strong>IFSC Code:</strong> {employee.ifscCode || "N/A"}</p>
+
+                    {/* HIDDEN BARCODE FOR DOWNLOAD ONLY */}
+                    <div className="hidden">
+                        <div ref={barcodeRef}>
+                            <Barcode value={employee.empCode} height={70} fontSize={14} />
+                        </div>
                     </div>
 
-                    <Button variant="outline" onClick={downloadBarcode}>
-                        <Download className="h-4 w-4 mr-2" /> Download
+                    {/* DOWNLOAD BUTTON ONLY */}
+                    <Button variant="outline" onClick={downloadBarcode} className="w-full">
+                        <Download className="h-4 w-4 mr-2" /> Download Employee Barcode
                     </Button>
+
                 </CardContent>
             </Card>
         </div>
