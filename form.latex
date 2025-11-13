@@ -1,0 +1,89 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{setspace}
+\usepackage{titlesec}
+
+\titlespacing*{\section}{0pt}{14pt}{6pt}
+
+\newcommand{\linefill}{\rule{11cm}{0.4pt}}
+\newcommand{\shortline}{\rule{7cm}{0.4pt}}
+
+\begin{document}
+
+\begin{center}
+    {\Large \textbf{EMPLOYEE REGISTRATION FORM}}\\[6pt]
+    \rule{\linewidth}{0.5pt}
+\end{center}
+
+% ================ Section 1 ==================
+\section*{1. Basic Details}
+
+\textbf{Name:} \linefill \\[12pt]
+\textbf{Mobile No:} \linefill \\[12pt]
+\textbf{Aadhaar No:} \linefill \\[12pt]
+\textbf{PAN No:} \linefill \\[12pt]
+\textbf{Date of Birth:} \linefill \\[12pt]
+\textbf{Gender:} (Male / Female / Other) \linefill \\[12pt]
+
+% ================ Section 2 ==================
+\section*{2. Address Details}
+
+\textbf{Current Address:}\\[-4pt]
+
+
+\textbf{House / Flat No:} \linefill \\[10pt]
+\textbf{Street:} \linefill \\[10pt]
+\textbf{Area / Locality:} \linefill \\[10pt]
+\textbf{City:} \linefill \\[10pt]
+\textbf{District:} \linefill \\[10pt]
+\textbf{State:} \linefill \\[10pt]
+\textbf{Pincode:} \linefill \\[10pt]
+
+\vspace{10pt}
+
+\textbf{Permanent Address (✓ Same as current):}\\[-4pt]
+
+
+\textbf{House / Flat No:} \linefill \\[10pt]
+\textbf{Street:} \linefill \\[10pt]
+\textbf{Area / Locality:} \linefill \\[10pt]
+\textbf{City:} \linefill \\[10pt]
+\textbf{District:} \linefill \\[10pt]
+\textbf{State:} \linefill \\[10pt]
+\textbf{Pincode:} \linefill \\[10pt]
+
+% ================ Section 3 ==================
+\section*{3. Bank Details}
+
+\textbf{Bank Account No:} \linefill \\[12pt]
+\textbf{IFSC Code:} \linefill \\[12pt]
+\textbf{Bank Name:} \linefill \\[12pt]
+\textbf{Branch Name:} \linefill \\[12pt]
+
+% ================ Section 4 ==================
+\section*{4. PF / ESIC Details}
+
+\textbf{PF ID:} \linefill \\[12pt]
+\textbf{ESIC ID:} \linefill \\[12pt]
+
+% ================ Section 5 ==================
+\section*{5. Employment Details}
+
+\textbf{Department:} \linefill \\[12pt]
+\textbf{Shift Type:} \linefill \\[12pt]
+\textbf{Hourly Rate:} \linefill \\[12pt]
+
+% ================ Declaration ==================
+\vspace{20pt}
+\section*{Declaration}
+
+I hereby declare that all the information provided is true and correct to the best of my knowledge.
+
+\vspace{40pt}
+
+\textbf{Employee Signature:} \shortline \hfill
+\textbf{HR Signature:} \shortline
+
+\end{document}
