@@ -239,7 +239,7 @@ export default function AddEmployeePage() {
                     </SelectTrigger>
                     <SelectContent>
                       {departments.map((dept) => (
-                        <SelectItem key={dept._id} value={dept._id}>
+                        <SelectItem key={dept.id} value={dept.id}>
                           {dept.name}
                         </SelectItem>
                       ))}
@@ -329,9 +329,7 @@ export default function AddEmployeePage() {
                   <p>
                     <strong>Department:</strong>{" "}
                     {
-                      departments.find(
-                        (d) => d._id === generatedEmployee.departmentId
-                      )?.name
+                      departments.find((d) => d.id === generatedEmployee.departmentId)?.name
                     }
                   </p>
                   {generatedEmployee.pfId && (

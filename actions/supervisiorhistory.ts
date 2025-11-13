@@ -1,10 +1,7 @@
 "use server";
 
-import AttendanceWallet, { IAttendanceWallet } from "@/lib/models/EmployeeAttendanceWallet";
-import Employee, { IEmployee } from "@/lib/models/Employee";
-import Department, { IDepartment } from "@/lib/models/Department";
+import prisma from "@/lib/prisma";
 import { getUserFromCookies } from "@/lib/auth";
-import mongoose from "mongoose";
 
 export type SupervisorScanLog = {
     employeeId: string;
@@ -17,43 +14,46 @@ export type SupervisorScanLog = {
 };
 
 export async function getSupervisorScans(): Promise<SupervisorScanLog[]> {
-    // 🔹 Get current logged-in supervisor
+    // 🔹 Validate user
     const supervisor = await getUserFromCookies();
     if (!supervisor) throw new Error("Unauthorized");
 
-    const supervisorId = new mongoose.Types.ObjectId(supervisor.id);
+    const supervisorId = supervisor.id;
 
-    // 🔹 Fetch all AttendanceWallets with entries scanned by this supervisor
-    const wallets: IAttendanceWallet[] = await AttendanceWallet.find({
-        "entries.scannedBy": supervisorId,
-    })
-        .populate<{ employeeId: IEmployee }>("employeeId", "name")
-        .populate<{ "entries.departmentId": IDepartment }>("entries.departmentId", "name")
-        .exec();
+    // 🔹 Fetch all wallets + entries scanned by this supervisor
+    const wallets = await prisma.attendanceWallet.findMany({
+        include: {
+            employee: true, // get employee.name
+            entries: {
+                include: {
+                    department: true, // get department.name
+                }
+            }
+        }
+    });
 
     const logs: SupervisorScanLog[] = [];
 
     // 🔹 Flatten entries scanned by this supervisor
-    wallets.forEach((wallet) => {
-        const employee = wallet.employeeId as IEmployee;
-        wallet.entries.forEach((entry) => {
-            if (entry.scannedBy.toString() !== supervisor.id) return;
-
-            const department = entry.departmentId as IDepartment | null;
+    for (const wallet of wallets) {
+        for (const entry of wallet.entries) {
+            if (entry.scannedBy !== supervisorId) continue;
 
             logs.push({
-                employeeId: employee?._id.toString() || "",
-                employeeName: employee?.name || "Unknown",
-                departmentId: department?._id?.toString() || "",
-                departmentName: department?.name || "Unknown",
-                scanType: entry.scanType,
-                timestamp: entry.timestamp,
-                autoClosed: entry.autoClosed,
-            });
-        });
-    });
+                employeeId: wallet.employeeId,
+                employeeName: wallet.employee?.name ?? "Unknown",
 
-    // 🔹 Sort logs by timestamp descending (latest first)
+                departmentId: entry.departmentId ?? "",
+                departmentName: entry.department?.name ?? "Unknown",
+
+                scanType: entry.scanType as "in" | "out",
+                timestamp: entry.timestamp,
+                autoClosed: entry.autoClosed ?? false,
+            });
+        }
+    }
+
+    // 🔹 Sort (latest first)
     logs.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
     return logs;

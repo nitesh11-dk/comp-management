@@ -1,8 +1,7 @@
 "use server";
 
+import prisma from "@/lib/prisma";
 import { getUserFromCookies } from "@/lib/auth";
-import Department, { IDepartment } from "@/lib/models/Department";
-import connect from "@/lib/mongo";
 import { ActionResponse } from "@/lib/types/types";
 
 /**
@@ -10,13 +9,22 @@ import { ActionResponse } from "@/lib/types/types";
  */
 export async function createDepartment(
     data: { name: string; description?: string }
-): Promise<ActionResponse<IDepartment>> {
+): Promise<ActionResponse<any>> {
     try {
-        await connect();
-        const department = await Department.create(data);
-        return { success: true, message: "Department created", data: department };
+        const department = await prisma.department.create({
+            data,
+        });
+
+        return {
+            success: true,
+            message: "Department created",
+            data: department,
+        };
     } catch (error: any) {
-        return { success: false, message: error.message };
+        return {
+            success: false,
+            message: error.message,
+        };
     }
 }
 
@@ -24,14 +32,24 @@ export async function createDepartment(
  * READ all departments
  */
 export async function getDepartments(): Promise<
-    ActionResponse<IDepartment[]>
+    ActionResponse<any[]>
 > {
     try {
-        await connect();
-        const departments = await Department.find().sort({ createdAt: -1 });
-        return { success: true, message: "Departments fetched", data: departments };
+        const departments = await prisma.department.findMany({
+            orderBy: { createdAt: "desc" },
+        });
+
+        return {
+            success: true,
+            message: "Departments fetched",
+            data: departments,
+        };
     } catch (error: any) {
-        return { success: false, message: error.message, data: [] };
+        return {
+            success: false,
+            message: error.message,
+            data: [],
+        };
     }
 }
 
@@ -40,16 +58,31 @@ export async function getDepartments(): Promise<
  */
 export async function getDepartmentById(
     id: string
-): Promise<ActionResponse<IDepartment | null>> {
+): Promise<ActionResponse<any | null>> {
     try {
-        await connect();
-        const department = await Department.findById(id);
+        const department = await prisma.department.findUnique({
+            where: { id },
+        });
+
         if (!department) {
-            return { success: false, message: "Department not found", data: null };
+            return {
+                success: false,
+                message: "Department not found",
+                data: null,
+            };
         }
-        return { success: true, message: "Department fetched", data: department };
+
+        return {
+            success: true,
+            message: "Department fetched",
+            data: department,
+        };
     } catch (error: any) {
-        return { success: false, message: error.message, data: null };
+        return {
+            success: false,
+            message: error.message,
+            data: null,
+        };
     }
 }
 
@@ -59,18 +92,32 @@ export async function getDepartmentById(
 export async function updateDepartment(
     id: string,
     data: Partial<{ name: string; description: string }>
-): Promise<ActionResponse<IDepartment | null>> {
+): Promise<ActionResponse<any | null>> {
     try {
-        await connect();
-        const department = await Department.findByIdAndUpdate(id, data, {
-            new: true,
+        const department = await prisma.department.update({
+            where: { id },
+            data,
         });
-        if (!department) {
-            return { success: false, message: "Department not found", data: null };
-        }
-        return { success: true, message: "Department updated", data: department };
+
+        return {
+            success: true,
+            message: "Department updated",
+            data: department,
+        };
     } catch (error: any) {
-        return { success: false, message: error.message, data: null };
+        if (error.code === "P2025") {
+            return {
+                success: false,
+                message: "Department not found",
+                data: null,
+            };
+        }
+
+        return {
+            success: false,
+            message: error.message,
+            data: null,
+        };
     }
 }
 
@@ -81,39 +128,78 @@ export async function deleteDepartment(
     id: string
 ): Promise<ActionResponse<null>> {
     try {
-        await connect();
-        const deleted = await Department.findByIdAndDelete(id);
-        if (!deleted) {
-            return { success: false, message: "Department not found", data: null };
-        }
-        return { success: true, message: "Department deleted", data: null };
+        await prisma.department.delete({
+            where: { id },
+        });
+
+        return {
+            success: true,
+            message: "Department deleted",
+            data: null,
+        };
     } catch (error: any) {
-        return { success: false, message: error.message, data: null };
+        if (error.code === "P2025") {
+            return {
+                success: false,
+                message: "Department not found",
+                data: null,
+            };
+        }
+
+        return {
+            success: false,
+            message: error.message,
+            data: null,
+        };
     }
 }
 
-
+/**
+ * GET CURRENT USER'S DEPARTMENT
+ */
 export async function getCurrentUserDepartment(): Promise<
-    ActionResponse<IDepartment | null>
+    ActionResponse<any | null>
 > {
     try {
-        await connect();
         const user = await getUserFromCookies();
         if (!user) {
-            return { success: false, message: "User not authenticated", data: null };
+            return {
+                success: false,
+                message: "User not authenticated",
+                data: null,
+            };
         }
 
         if (!user.departmentId) {
-            return { success: false, message: "User has no assigned department", data: null };
+            return {
+                success: false,
+                message: "User has no assigned department",
+                data: null,
+            };
         }
 
-        const department = await Department.findById(user.departmentId);
+        const department = await prisma.department.findUnique({
+            where: { id: user.departmentId },
+        });
+
         if (!department) {
-            return { success: false, message: "Department not found", data: null };
+            return {
+                success: false,
+                message: "Department not found",
+                data: null,
+            };
         }
 
-        return { success: true, message: "User department fetched", data: department };
+        return {
+            success: true,
+            message: "User department fetched",
+            data: department,
+        };
     } catch (error: any) {
-        return { success: false, message: error.message, data: null };
+        return {
+            success: false,
+            message: error.message,
+            data: null,
+        };
     }
 }

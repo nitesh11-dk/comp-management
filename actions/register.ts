@@ -1,8 +1,7 @@
 "use server";
 
 import bcrypt from "bcryptjs";
-import connect from "@/lib/mongo";
-import User from "@/lib/models/User";
+import prisma from "@/lib/prisma";
 
 export async function registerUser(formData: {
   username: string;
@@ -12,12 +11,10 @@ export async function registerUser(formData: {
 }) {
   let { username, password, role, departmentId } = formData;
 
-  await connect();
-
-  // ✅ normalize username
+  // Normalize username
   username = username.trim().toLowerCase();
 
-  // ✅ validate username format (only lowercase letters + numbers)
+  // Validate username format
   const usernameRegex = /^[a-z0-9]+$/;
   if (!usernameRegex.test(username)) {
     return {
@@ -27,22 +24,36 @@ export async function registerUser(formData: {
     };
   }
 
-  // check if username already exists
-  const existingUser = await User.findOne({ username });
+  // Check if username exists
+  const existingUser = await prisma.user.findUnique({
+    where: { username },
+  });
+
   if (existingUser) {
     return { success: false, message: "Username already exists" };
   }
 
-  // hash password
-  const hashed = await bcrypt.hash(password, 10);
+  // Hash password
+  const hashedPassword = await bcrypt.hash(password, 10);
 
-  // create user
-  const user = await User.create({
-    username,
-    password: hashed,
-    role,
-    departmentId: role === "supervisor" ? departmentId : undefined,
+  // Supervisor must have departmentId
+  if (role === "supervisor" && !departmentId) {
+    return { success: false, message: "Supervisor must have a department" };
+  }
+
+  // Create user
+  const user = await prisma.user.create({
+    data: {
+      username,
+      password: hashedPassword,
+      role,
+      departmentId: role === "supervisor" ? departmentId : null,
+    },
   });
 
-  return { success: true, message: "Registered successfully", user };
+  return {
+    success: true,
+    message: "Registered successfully",
+    user,
+  };
 }

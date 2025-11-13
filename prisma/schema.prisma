@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+//
+// ---------------------- USER ----------------------
+//
+
+enum UserRole {
+  admin
+  supervisor
+}
+
+model User {
+  id           String      @id @default(uuid())
+  username     String      @unique
+  password     String
+  role         UserRole
+  departmentId String?     
+  department   Department? @relation(fields: [departmentId], references: [id])
+
+  // attendance scans (scannedBy)
+  attendanceEntries AttendanceEntry[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+//
+// ---------------------- DEPARTMENT ----------------------
+//
+
+model Department {
+  id          String     @id @default(uuid())
+  name        String     @unique
+  description String?
+
+  users      User[]
+  employees  Employee[]
+  attendanceEntries AttendanceEntry[]
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+//
+// ---------------------- EMPLOYEE ----------------------
+//
+
+model Employee {
+  id          String   @id @default(uuid())
+  empCode     String   @unique
+  name        String
+  pfId        String?  @unique
+  esicId      String?  @unique
+  aadhaarNumber String @unique
+  mobile      String
+  shiftType   String
+  hourlyRate  Float
+  profileComplete Boolean @default(false)
+
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+
+  attendanceWallet AttendanceWallet?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+//
+// ---------------------- ATTENDANCE ENTRY ----------------------
+//
+
+enum ScanType {
+  in
+  out
+}
+
+model AttendanceEntry {
+  id            String    @id @default(uuid())
+  timestamp     DateTime  @default(now())
+  scanType      ScanType
+
+  // relations
+  departmentId  String
+  department    Department @relation(fields: [departmentId], references: [id])
+
+  scannedBy     String
+  user          User       @relation(fields: [scannedBy], references: [id])
+
+  walletId      String
+  wallet        AttendanceWallet @relation(fields: [walletId], references: [id])
+
+  autoClosed    Boolean   @default(false)
+}
+
+//
+// ---------------------- ATTENDANCE WALLET ----------------------
+//
+
+model AttendanceWallet {
+  id         String             @id @default(uuid())
+  employeeId String             @unique
+  employee   Employee           @relation(fields: [employeeId], references: [id])
+
+  entries    AttendanceEntry[]
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}

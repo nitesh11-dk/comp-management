@@ -138,14 +138,14 @@ export default function EmployeeManagement() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => router.push(`/admin/dashboard/employee/${emp._id}`)}
+                      onClick={() => router.push(`/admin/dashboard/employee/${emp.id}`)}
                     >
                       <Eye className="h-4 w-4 mr-1" /> View
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => router.push(`/admin/dashboard/employee/edit/${emp._id}`)}
+                      onClick={() => router.push(`/admin/dashboard/employee/edit/${emp.id}`)}
                     >
                       <Edit className="h-4 w-4 mr-1" /> Edit
                     </Button>

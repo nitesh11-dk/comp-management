@@ -7,41 +7,54 @@ export default function UserForm({
     onSubmit,
     buttonText,
     departments = [],
-}: {
-    initialData: any;
-    onSubmit: (formData: any) => void;
-    buttonText: string;
-    departments?: any[];
 }) {
     const [formData, setFormData] = useState(initialData);
     const [usernameError, setUsernameError] = useState<string | null>(null);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const handleChange = (e) => {
         let { name, value } = e.target;
 
+        // username validation
         if (name === "username") {
-            // force lowercase
             value = value.toLowerCase();
-
-            // validate only lowercase letters + numbers
             const usernameRegex = /^[a-z0-9]*$/;
             if (!usernameRegex.test(value)) {
-                setUsernameError("Username can only contain lowercase letters and numbers.");
+                setUsernameError(
+                    "Username can only contain lowercase letters and numbers."
+                );
             } else {
                 setUsernameError(null);
             }
         }
 
+        // if role becomes admin → departmentId MUST clear
+        if (name === "role" && value === "admin") {
+            setFormData({
+                ...formData,
+                role: value,
+                departmentId: "",
+            });
+            return;
+        }
+
         setFormData({ ...formData, [name]: value });
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
 
-        // prevent submission if invalid username
         if (usernameError) return;
 
-        onSubmit(formData);
+        // Prevent empty string from crashing Prisma
+        const cleanData = {
+            ...formData,
+            departmentId:
+                formData.role === "supervisor" && formData.departmentId !== ""
+                    ? formData.departmentId
+                    : null,
+        };
+
+        onSubmit(cleanData);
     };
 
     return (
@@ -117,8 +130,10 @@ export default function UserForm({
                         required
                     >
                         <option value="">Select Department</option>
+
+                        {/* FIXED: use Prisma id instead of _id */}
                         {departments.map((dept) => (
-                            <option key={dept._id} value={dept._id}>
+                            <option key={dept.id} value={dept.id}>
                                 {dept.name}
                             </option>
                         ))}
