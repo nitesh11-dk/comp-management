@@ -48,9 +48,14 @@ export default function ShiftTypesPage() {
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [deleteError, setDeleteError] = useState("");
 
-    // Convert Date → HH:mm
-    const formatTime = (dateStr: string) =>
-        new Date(dateStr).toISOString().slice(11, 16);
+    // Convert stored ISO → HH:mm
+    const formatTime = (dateStr: string) => {
+        try {
+            return new Date(dateStr).toISOString().slice(11, 16);
+        } catch {
+            return "";
+        }
+    };
 
     // Load Shifts
     const loadShiftTypes = async () => {
@@ -65,7 +70,7 @@ export default function ShiftTypesPage() {
         loadShiftTypes();
     }, []);
 
-    // CREATE
+    // CREATE SHIFT
     const handleCreate = async (e: any) => {
         e.preventDefault();
 
@@ -74,7 +79,13 @@ export default function ShiftTypesPage() {
             return;
         }
 
-        const res = await createShiftType(newShift);
+        const today = new Date().toISOString().slice(0, 10);
+
+        const res = await createShiftType({
+            name: newShift.name,
+            startTime: `${today}T${newShift.startTime}:00.000Z`,
+            endTime: `${today}T${newShift.endTime}:00.000Z`,
+        });
 
         if (res.success) {
             toast.success("Shift created");
@@ -86,6 +97,7 @@ export default function ShiftTypesPage() {
     // Start Edit
     const handleStartEdit = (shift: any) => {
         setEditRowId(shift.id);
+
         setEditForm({
             name: shift.name,
             startTime: formatTime(shift.startTime),
@@ -93,21 +105,19 @@ export default function ShiftTypesPage() {
         });
     };
 
+    // SAVE EDIT
     const handleSave = async (id: string) => {
-        if (!editForm.startTime || !editForm.endTime) {
-            toast.error("Start and End time required");
+        if (!editForm.startTime || !editForm.endTime || !editForm.name) {
+            toast.error("All fields required");
             return;
         }
 
         const today = new Date().toISOString().slice(0, 10);
 
-        const startISO = `${today}T${editForm.startTime}:00.000Z`;
-        const endISO = `${today}T${editForm.endTime}:00.000Z`;
-
         const res = await updateShiftType(id, {
             name: editForm.name,
-            startTime: startISO,
-            endTime: endISO,
+            startTime: `${today}T${editForm.startTime}:00.000Z`,
+            endTime: `${today}T${editForm.endTime}:00.000Z`,
         });
 
         if (res.success) {
@@ -120,15 +130,13 @@ export default function ShiftTypesPage() {
         }
     };
 
-
-
     // Cancel Edit
     const handleCancel = () => {
         setEditRowId(null);
         setEditForm({ name: "", startTime: "", endTime: "" });
     };
 
-    // Confirm delete
+    // Delete
     const handleDeleteConfirmed = async () => {
         if (!deleteId) return;
 
@@ -277,7 +285,7 @@ export default function ShiftTypesPage() {
                                                     )}
                                                 </td>
 
-                                                {/* TOTAL HOURS */}
+                                                {/* HOURS */}
                                                 <td className="border px-3 py-2 text-center font-semibold">
                                                     {shift.totalHours} h
                                                 </td>
@@ -324,7 +332,7 @@ export default function ShiftTypesPage() {
                                                                     {deleteError ? (
                                                                         <p className="text-red-600">{deleteError}</p>
                                                                     ) : (
-                                                                        <p>Are you sure you want to delete this shift?</p>
+                                                                        <p>Are you sure?</p>
                                                                     )}
 
                                                                     <AlertDialogFooter>
