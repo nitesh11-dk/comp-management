@@ -124,9 +124,7 @@ export async function updateDepartment(
 /**
  * DELETE department by ID
  */
-export async function deleteDepartment(
-    id: string
-): Promise<ActionResponse<null>> {
+export async function deleteDepartment(id: string) {
     try {
         await prisma.department.delete({
             where: { id },
@@ -134,10 +132,24 @@ export async function deleteDepartment(
 
         return {
             success: true,
-            message: "Department deleted",
+            message: "Department deleted successfully",
             data: null,
         };
     } catch (error: any) {
+
+        console.error("Delete Department Error:", error); // terminal me rahega
+
+        // 🔥 Dept used in Attendance or Employees or Users
+        if (error.code === "P2003") {
+            return {
+                success: false,
+                message:
+                    "❌ Cannot delete department because it is assigned to Employees or Attendance Records. Please reassign or remove them first.",
+                data: null,
+            };
+        }
+
+        // Not found
         if (error.code === "P2025") {
             return {
                 success: false,
@@ -146,9 +158,10 @@ export async function deleteDepartment(
             };
         }
 
+        // Unknown error fallback
         return {
             success: false,
-            message: error.message,
+            message: "Something went wrong while deleting the department.",
             data: null,
         };
     }
