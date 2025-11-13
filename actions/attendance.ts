@@ -295,3 +295,66 @@ export async function addTestEntries(employeeId: string) {
         })),
     };
 }
+
+// ---------------------- UPDATE ENTRY ----------------------
+export async function updateAttendanceEntry(
+    entryId: string,
+    data: { timestamp?: string; scanType?: "in" | "out"; departmentId?: string }
+) {
+    try {
+        const updated = await prisma.attendanceEntry.update({
+            where: { id: entryId },
+            data: {
+                timestamp: data.timestamp ? new Date(data.timestamp) : undefined,
+                scanType: data.scanType,
+                departmentId: data.departmentId,
+            },
+        });
+
+        return { success: true, data: updated };
+    } catch (e: any) {
+        return { success: false, message: e.message };
+    }
+}
+
+// ---------------------- ADD MANUAL ENTRY ----------------------
+export async function addManualAttendanceEntry(data: {
+    employeeId: string;
+    timestamp: string;
+    scanType: "in" | "out";
+    departmentId: string;
+    scannedBy: string;
+}) {
+    try {
+        const wallet = await prisma.attendanceWallet.findUnique({
+            where: { employeeId: data.employeeId },
+        });
+
+        if (!wallet) return { success: false, message: "Wallet not found" };
+
+        const created = await prisma.attendanceEntry.create({
+            data: {
+                timestamp: new Date(data.timestamp),
+                scanType: data.scanType,
+                departmentId: data.departmentId,
+                scannedBy: data.scannedBy,
+                walletId: wallet.id,
+                autoClosed: false,
+            },
+        });
+
+        return { success: true, data: created };
+    } catch (e: any) {
+        return { success: false, message: e.message };
+    }
+}
+
+// ---------------------- DELETE ENTRY ----------------------
+export async function deleteAttendanceEntry(entryId: string) {
+    try {
+        await prisma.attendanceEntry.delete({ where: { id: entryId } });
+        return { success: true };
+    } catch (e: any) {
+        return { success: false, message: e.message };
+    }
+}

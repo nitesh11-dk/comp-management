@@ -1,14 +1,12 @@
 "use client";
 
+import React from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
-import DayEntriesTable from "./DayEntriesTable";
 
-export default function WorkLogTable({
-    workLogs,
-    expandedDate,
-    dayEntries,
-    onExpand,
-}: any) {
+export default function WorkLogTable({ workLogs, employeeId }: any) {
+    const router = useRouter();
+
     const grouped: Record<string, any[]> = {};
 
     workLogs.forEach((log: any) => {
@@ -46,39 +44,30 @@ export default function WorkLogTable({
 
                                 <tbody>
                                     {grouped[month]
-                                        .sort(
-                                            (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+                                        .sort((a: any, b: any) =>
+                                            new Date(b.date).getTime() - new Date(a.date).getTime()
                                         )
-                                        .map((log, i) => {
+                                        .map((log: any) => {
                                             const dateKey = log.date.toISOString().slice(0, 10);
-                                            const isExpanded = expandedDate === dateKey;
 
                                             return (
-                                                <>
-                                                    <tr
-                                                        key={dateKey}
-                                                        className="cursor-pointer hover:bg-blue-50"
-                                                        onClick={() => onExpand(dateKey)}
-                                                    >
-                                                        <td className="border px-4 py-2">
-                                                            {dateKey}
-                                                        </td>
-                                                        <td className="border px-4 py-2">
-                                                            {log.hours}h {log.minutes}m
-                                                        </td>
-                                                        <td className="border px-4 py-2">
-                                                            ₹{log.salaryEarned}
-                                                        </td>
-                                                    </tr>
-
-                                                    {isExpanded && (
-                                                        <tr>
-                                                            <td colSpan={3} className="border bg-gray-50 p-2">
-                                                                <DayEntriesTable entries={dayEntries} />
-                                                            </td>
-                                                        </tr>
-                                                    )}
-                                                </>
+                                                <tr
+                                                    key={dateKey}
+                                                    className="cursor-pointer hover:bg-blue-50 transition"
+                                                    onClick={() =>
+                                                        router.push(
+                                                            `/admin/dashboard/employee/${employeeId}/logs?date=${dateKey}`
+                                                        )
+                                                    }
+                                                >
+                                                    <td className="border px-4 py-2">{dateKey}</td>
+                                                    <td className="border px-4 py-2">
+                                                        {log.hours}h {log.minutes}m
+                                                    </td>
+                                                    <td className="border px-4 py-2">
+                                                        ₹{log.salaryEarned}
+                                                    </td>
+                                                </tr>
                                             );
                                         })}
                                 </tbody>

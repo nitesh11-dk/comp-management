@@ -1,7 +1,7 @@
-
+// app/admin/dashboard/employee/[id]/page.tsx (client file)
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -9,7 +9,6 @@ import { ArrowLeft } from "lucide-react";
 import { getEmployeeById } from "@/actions/employeeActions";
 import { getDepartmentById } from "@/actions/department";
 import { getShiftTypeById } from "@/actions/shiftType";
-
 import { calculateWorkLogs, getAttendanceWallet } from "@/actions/attendance";
 
 import EmployeeInfoCard from "@/components/admin/EmployeeInfoCard";
@@ -18,6 +17,7 @@ import WorkLogTable from "@/components/admin/WorkLogTable";
 export default function EmployeeDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const employeeId = params.id;
 
   const [employee, setEmployee] = useState<any>(null);
   const [department, setDepartment] = useState<any>(null);
@@ -29,43 +29,57 @@ export default function EmployeeDetailPage() {
 
   const [loadingLogs, setLoadingLogs] = useState(true);
 
-  useEffect(() => {
-    const load = async () => {
-      if (!params.id) return;
+  const loadEmployee = useCallback(async () => {
+    if (!employeeId) return;
 
-      // Fetch employee
-      const empRes = await getEmployeeById(params.id);
-      if (!empRes.success || !empRes.data) return router.push("/");
+    const empRes = await getEmployeeById(employeeId);
+    if (!empRes.success || !empRes.data) return router.push("/");
 
-      const emp = empRes.data;
-      setEmployee(emp);
+    const emp = empRes.data;
+    setEmployee(emp);
 
-      // Fetch department
-      const deptRes = await getDepartmentById(emp.departmentId);
-      if (deptRes.success) setDepartment(deptRes.data);
+    const deptRes = await getDepartmentById(emp.departmentId);
+    if (deptRes.success) setDepartment(deptRes.data);
 
-      // Fetch Shift Type (IMPORTANT)
-      if (emp.shiftTypeId) {
-        const shiftRes = await getShiftTypeById(emp.shiftTypeId);
-        if (shiftRes.success) setShiftType(shiftRes.data);
-      }
+    if (emp.shiftTypeId) {
+      const shiftRes = await getShiftTypeById(emp.shiftTypeId);
+      if (shiftRes.success) setShiftType(shiftRes.data);
+    }
+  }, [employeeId, router]);
 
-      // Fetch Attendance
-      setLoadingLogs(true);
+  const refreshLogs = useCallback(async () => {
+    if (!employeeId) return;
+    setLoadingLogs(true);
 
-      const wallet = await getAttendanceWallet(emp.id);
-      if (wallet?.entries?.length) {
-        const logs = await calculateWorkLogs(wallet.entries, emp.hourlyRate);
-        setWorkLogs(logs);
-      }
-
+    const wallet = await getAttendanceWallet(employeeId);
+    if (!wallet) {
+      setWorkLogs([]);
+      setDayEntries([]);
       setLoadingLogs(false);
-    };
+      return;
+    }
 
-    load();
-  }, [params.id]);
+    const logs = await calculateWorkLogs(wallet.entries, employee?.hourlyRate || 0);
+    setWorkLogs(logs);
 
-  // Expand logs by date
+    // if a day is expanded, update its raw entries
+    if (expandedDate) {
+      const filtered = wallet.entries.filter((e: any) =>
+        e.timestamp.toISOString().startsWith(expandedDate)
+      );
+      setDayEntries(filtered);
+    }
+
+    setLoadingLogs(false);
+  }, [employeeId, expandedDate, employee?.hourlyRate]);
+
+  useEffect(() => {
+    (async () => {
+      await loadEmployee();
+      await refreshLogs();
+    })();
+  }, [loadEmployee, refreshLogs]);
+
   const handleExpand = async (date: string) => {
     if (!employee) return;
 
@@ -75,6 +89,7 @@ export default function EmployeeDetailPage() {
       return;
     }
 
+    // fetch fresh wallet and filter day entries
     const wallet = await getAttendanceWallet(employee.id);
     if (!wallet) return;
 
@@ -90,7 +105,6 @@ export default function EmployeeDetailPage() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="outline" onClick={() => router.back()} size="sm">
           <ArrowLeft className="h-4 w-4 mr-2" /> Back
@@ -98,27 +112,12 @@ export default function EmployeeDetailPage() {
         <h1 className="text-2xl font-bold">{employee.name}</h1>
       </div>
 
-      {/* UPDATED INFO CARD WITH SHIFT TYPE */}
-      <EmployeeInfoCard
-        employee={employee}
-        department={department}
-        shiftType={shiftType}
-      />
+      <EmployeeInfoCard employee={employee} department={department} shiftType={shiftType} />
 
-      {/* Loader BEFORE WorkLogTable */}
       {loadingLogs ? (
         <div className="w-full flex flex-col items-center justify-center py-10">
           <div className="animate-spin h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full mb-4"></div>
           <p className="text-gray-600 text-sm">Loading attendance logs...</p>
-
-          <div className="w-full max-w-5xl mt-6 space-y-2">
-            {[1, 2, 3, 4].map((i) => (
-              <div
-                key={i}
-                className="h-10 bg-gray-200 animate-pulse rounded-md"
-              ></div>
-            ))}
-          </div>
         </div>
       ) : (
         <WorkLogTable
@@ -126,12 +125,10 @@ export default function EmployeeDetailPage() {
           expandedDate={expandedDate}
           dayEntries={dayEntries}
           onExpand={handleExpand}
+          employeeId={employee.id}
+          onRefresh={refreshLogs}
         />
       )}
     </div>
   );
 }
-
-
-
-
