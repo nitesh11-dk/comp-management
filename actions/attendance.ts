@@ -27,13 +27,29 @@ export type RawEntry = {
 //
 export async function getAttendanceWallet(
     employeeId: string
-): Promise<{ id: string; employeeId: string; entries: RawEntry[] } | null> {
+): Promise<{
+    id: string;
+    employeeId: string;
+    entries: {
+        id: string;
+        timestamp: Date;
+        scanType: "in" | "out";
+        departmentId: string;
+        department: { name: string };
+        scannedBy: string;
+        scannedByUser: { username: string };
+        autoClosed: boolean;
+    }[];
+} | null> {
     const wallet = await prisma.attendanceWallet.findUnique({
         where: { employeeId },
         include: {
             entries: {
                 orderBy: { timestamp: "asc" },
-                include: { department: true, user: true },
+                include: {
+                    department: true, // includes department name
+                    user: true        // includes user (scannedBy)
+                },
             },
         },
     });
@@ -48,7 +64,19 @@ export async function getAttendanceWallet(
             timestamp: e.timestamp,
             scanType: e.scanType as "in" | "out",
             departmentId: e.departmentId,
+
+            // ✅ FIXED → Now frontend gets department name
+            department: {
+                name: e.department?.name || "Unknown",
+            },
+
             scannedBy: e.scannedBy,
+
+            // ✅ Also return scanner username
+            scannedByUser: {
+                username: e.user?.username || "Unknown",
+            },
+
             autoClosed: e.autoClosed,
         })),
     };
