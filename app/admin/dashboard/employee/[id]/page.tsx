@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -7,6 +8,8 @@ import { ArrowLeft } from "lucide-react";
 
 import { getEmployeeById } from "@/actions/employeeActions";
 import { getDepartmentById } from "@/actions/department";
+import { getShiftTypeById } from "@/actions/shiftType";
+
 import { calculateWorkLogs, getAttendanceWallet } from "@/actions/attendance";
 
 import EmployeeInfoCard from "@/components/admin/EmployeeInfoCard";
@@ -18,6 +21,8 @@ export default function EmployeeDetailPage() {
 
   const [employee, setEmployee] = useState<any>(null);
   const [department, setDepartment] = useState<any>(null);
+  const [shiftType, setShiftType] = useState<any>(null);
+
   const [workLogs, setWorkLogs] = useState<any[]>([]);
   const [dayEntries, setDayEntries] = useState<any[]>([]);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
@@ -28,15 +33,24 @@ export default function EmployeeDetailPage() {
     const load = async () => {
       if (!params.id) return;
 
+      // Fetch employee
       const empRes = await getEmployeeById(params.id);
       if (!empRes.success || !empRes.data) return router.push("/");
 
       const emp = empRes.data;
       setEmployee(emp);
 
+      // Fetch department
       const deptRes = await getDepartmentById(emp.departmentId);
       if (deptRes.success) setDepartment(deptRes.data);
 
+      // Fetch Shift Type (IMPORTANT)
+      if (emp.shiftTypeId) {
+        const shiftRes = await getShiftTypeById(emp.shiftTypeId);
+        if (shiftRes.success) setShiftType(shiftRes.data);
+      }
+
+      // Fetch Attendance
       setLoadingLogs(true);
 
       const wallet = await getAttendanceWallet(emp.id);
@@ -51,6 +65,7 @@ export default function EmployeeDetailPage() {
     load();
   }, [params.id]);
 
+  // Expand logs by date
   const handleExpand = async (date: string) => {
     if (!employee) return;
 
@@ -83,7 +98,12 @@ export default function EmployeeDetailPage() {
         <h1 className="text-2xl font-bold">{employee.name}</h1>
       </div>
 
-      <EmployeeInfoCard employee={employee} department={department} />
+      {/* UPDATED INFO CARD WITH SHIFT TYPE */}
+      <EmployeeInfoCard
+        employee={employee}
+        department={department}
+        shiftType={shiftType}
+      />
 
       {/* Loader BEFORE WorkLogTable */}
       {loadingLogs ? (
@@ -111,3 +131,7 @@ export default function EmployeeDetailPage() {
     </div>
   );
 }
+
+
+
+

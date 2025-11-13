@@ -134,3 +134,37 @@ export async function deleteShiftType(id: string) {
         return { success: false, message: "Delete failed", data: null };
     }
 }
+
+
+/**
+ * GET ONE SHIFT BY ID
+ */
+export async function getShiftTypeById(
+    id: string
+): Promise<ActionResponse<any>> {
+    try {
+        const shift = await prisma.shiftType.findUnique({
+            where: { id },
+        });
+
+        if (!shift) {
+            return {
+                success: false,
+                message: "Shift type not found",
+                data: null,
+            };
+        }
+
+        return {
+            success: true,
+            message: "Shift type fetched",
+            data: shift,
+        };
+    } catch (error: any) {
+        return {
+            success: false,
+            message: "Failed to fetch shift type",
+            data: null,
+        };
+    }
+}

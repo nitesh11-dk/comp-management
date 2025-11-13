@@ -6,6 +6,7 @@ import { toast } from "sonner"
 
 import { createEmployee } from "@/actions/employeeActions"
 import { getDepartments } from "@/actions/department"
+import { getShiftTypes } from "@/actions/shiftType"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,14 +27,16 @@ export default function AddEmployeePage() {
     aadhaarNumber: "",
     mobile: "",
     departmentId: "",
-    shiftType: "",
+    shiftTypeId: "",
     pfId: "",
     esicId: "",
     hourlyRate: "",
   })
+
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const [departments, setDepartments] = useState<any[]>([])
+  const [shiftTypes, setShiftTypes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   const [message, setMessage] = useState("")
@@ -42,33 +45,36 @@ export default function AddEmployeePage() {
 
   const barcodeRef = useRef<HTMLDivElement>(null)
 
+  // Load Departments & Shift Types
   useEffect(() => {
-    const fetchDepartments = async () => {
+    const loadData = async () => {
       try {
-        const res = await getDepartments()
-        if (res.success) setDepartments(res.data || [])
-        else toast.error(res.message || "⚠️ Failed to load departments")
+        const deptRes = await getDepartments()
+        if (deptRes.success) setDepartments(deptRes.data)
+
+        const shiftRes = await getShiftTypes()
+        if (shiftRes.success) setShiftTypes(shiftRes.data)
       } catch (err) {
-        console.error("Error fetching departments:", err)
-        toast.error("🚨 Error fetching departments")
+        toast.error("Error loading data")
       } finally {
         setLoading(false)
       }
     }
-    fetchDepartments()
+    loadData()
   }, [])
 
   const downloadBarcode = async (empCode: string) => {
     if (!barcodeRef.current) return
-    try {
-      const canvas = await html2canvas(barcodeRef.current, { backgroundColor: "#ffffff", scale: 2 })
-      const link = document.createElement("a")
-      link.download = `employee_${empCode}_barcode.png`
-      link.href = canvas.toDataURL("image/png")
-      link.click()
-    } catch (error) {
-      console.error("Error downloading barcode:", error)
-    }
+
+    const canvas = await html2canvas(barcodeRef.current, {
+      backgroundColor: "#ffffff",
+      scale: 2,
+    })
+
+    const link = document.createElement("a")
+    link.download = `employee_${empCode}_barcode.png`
+    link.href = canvas.toDataURL("image/png")
+    link.click()
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -83,10 +89,10 @@ export default function AddEmployeePage() {
 
       if (res.success && res.data) {
         setGeneratedEmployee(res.data)
+
         setMessage(`Employee ${res.data.name} added successfully!`)
         setMessageType("success")
 
-        // Auto-download barcode based on empCode
         setTimeout(() => downloadBarcode(res.data.empCode), 500)
 
         setFormData({
@@ -94,7 +100,7 @@ export default function AddEmployeePage() {
           aadhaarNumber: "",
           mobile: "",
           departmentId: "",
-          shiftType: "",
+          shiftTypeId: "",
           pfId: "",
           esicId: "",
           hourlyRate: "",
@@ -103,9 +109,8 @@ export default function AddEmployeePage() {
         setMessage(res.message || "Error adding employee")
         setMessageType("error")
       }
-    } catch (error) {
-      console.error("❌ Error adding employee:", error)
-      setMessage("Error adding employee. Please try again.")
+    } catch (err) {
+      setMessage("Error adding employee")
       setMessageType("error")
     } finally {
       setIsSubmitting(false)
@@ -118,7 +123,7 @@ export default function AddEmployeePage() {
       aadhaarNumber: "",
       mobile: "",
       departmentId: "",
-      shiftType: "",
+      shiftTypeId: "",
       pfId: "",
       esicId: "",
       hourlyRate: "",
@@ -129,103 +134,62 @@ export default function AddEmployeePage() {
 
   return (
     <div className="min-h-screen bg-background p-2 sm:p-4">
-      <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold">Add New Employee</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
-              Fill in the employee details below
-            </p>
-          </div>
-        </div>
+      <div className="max-w-4xl mx-auto space-y-6">
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+        <h1 className="text-2xl font-bold">Add New Employee</h1>
+
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                <UserPlus className="h-4 w-4 sm:h-5 sm:w-5" /> Employee Information
+              <CardTitle className="flex items-center gap-2">
+                <UserPlus className="h-5 w-5" /> Employee Information
               </CardTitle>
             </CardHeader>
+
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
+
                 {/* Name */}
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    placeholder="Enter full name"
-                    required
-                  />
-                </div>
+                <Input
+                  placeholder="Full Name *"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                  required
+                />
 
                 {/* Aadhaar */}
-                <div className="space-y-2">
-                  <Label htmlFor="aadhaarNumber">Aadhaar Number *</Label>
-                  <Input
-                    id="aadhaarNumber"
-                    type="number"
-                    value={formData.aadhaarNumber}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        aadhaarNumber: e.target.value.replace(/\D/g, ""),
-                      })
-                    }
-                    placeholder="123456789012"
-                    required
-                  />
-                </div>
+                <Input
+                  type="number"
+                  placeholder="Aadhaar Number *"
+                  value={formData.aadhaarNumber}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      aadhaarNumber: e.target.value.replace(/\D/g, ""),
+                    })
+                  }
+                  required
+                />
 
                 {/* Mobile */}
-                <div className="space-y-2">
-                  <Label htmlFor="mobile">Mobile Number *</Label>
-                  <Input
-                    id="mobile"
-                    type="number"
-                    value={formData.mobile}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        mobile: e.target.value.replace(/\D/g, ""),
-                      })
-                    }
-                    placeholder="9876543210"
-                    required
-                  />
-                </div>
-
-                {/* PF & ESIC */}
-                <div className="space-y-2">
-                  <Label htmlFor="pfId">PF ID (Optional)</Label>
-                  <Input
-                    id="pfId"
-                    value={formData.pfId}
-                    onChange={(e) =>
-                      setFormData({ ...formData, pfId: e.target.value })
-                    }
-                    placeholder="Enter PF ID"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="esicId">ESIC ID (Optional)</Label>
-                  <Input
-                    id="esicId"
-                    value={formData.esicId}
-                    onChange={(e) =>
-                      setFormData({ ...formData, esicId: e.target.value })
-                    }
-                    placeholder="Enter ESIC ID"
-                  />
-                </div>
+                <Input
+                  type="number"
+                  placeholder="Mobile Number *"
+                  value={formData.mobile}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      mobile: e.target.value.replace(/\D/g, ""),
+                    })
+                  }
+                  required
+                />
 
                 {/* Department */}
-                <div className="space-y-2">
-                  <Label htmlFor="departmentId">Department *</Label>
+                <div>
+                  <Label>Department *</Label>
                   <Select
                     value={formData.departmentId}
                     onValueChange={(value) =>
@@ -233,150 +197,105 @@ export default function AddEmployeePage() {
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue
-                        placeholder={loading ? "Loading..." : "Select Department"}
-                      />
+                      <SelectValue placeholder="Select Department" />
                     </SelectTrigger>
                     <SelectContent>
-                      {departments.map((dept) => (
-                        <SelectItem key={dept.id} value={dept.id}>
-                          {dept.name}
+                      {departments.map((d) => (
+                        <SelectItem key={d.id} value={d.id}>
+                          {d.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                {/* Shift */}
-                <div className="space-y-2">
-                  <Label htmlFor="shiftType">Shift Type *</Label>
+                {/* Shift Type from DB */}
+                <div>
+                  <Label>Shift Type *</Label>
                   <Select
-                    value={formData.shiftType}
+                    value={formData.shiftTypeId}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, shiftType: value })
+                      setFormData({ ...formData, shiftTypeId: value })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select Shift" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="day">Day Shift (8h)</SelectItem>
-                      <SelectItem value="night">Night Shift (8h)</SelectItem>
-                      <SelectItem value="flexible">Flexible Shift</SelectItem>
+                      {shiftTypes.map((shift) => (
+                        <SelectItem key={shift.id} value={shift.id}>
+                          {shift.name} — {shift.totalHours} Hrs
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
 
                 {/* Hourly Rate */}
-                <div className="space-y-2">
-                  <Label htmlFor="hourlyRate">Hourly Rate (₹) *</Label>
-                  <Input
-                    id="hourlyRate"
-                    type="number"
-                    value={formData.hourlyRate}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        hourlyRate: e.target.value.replace(/\D/g, ""),
-                      })
-                    }
-                    placeholder="Enter hourly rate"
-                    required
-                  />
-                </div>
+                <Input
+                  type="number"
+                  placeholder="Hourly Rate (₹) *"
+                  value={formData.hourlyRate}
+                  onChange={(e) =>
+                    setFormData({ ...formData, hourlyRate: e.target.value })
+                  }
+                  required
+                />
 
                 {message && (
-                  <Alert
-                    variant={messageType === "error" ? "destructive" : "default"}
-                  >
+                  <Alert variant={messageType === "error" ? "destructive" : "default"}>
                     <AlertDescription>{message}</AlertDescription>
                   </Alert>
                 )}
 
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <Button type="submit" className="flex-1" disabled={isSubmitting}>
-                    {isSubmitting ? "Adding Employee..." : "Add Employee"}
+                <div className="flex gap-2">
+                  <Button className="flex-1" type="submit">
+                    {isSubmitting ? "Saving..." : "Add Employee"}
                   </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleClear}
-                    className="flex-1 sm:flex-none"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" /> Clear
+                  <Button variant="outline" type="button" onClick={handleClear}>
+                    <Trash2 className="h-4 w-4" /> Clear
                   </Button>
                 </div>
               </form>
             </CardContent>
           </Card>
 
-          {/* Barcode display based on empCode */}
+          {/* EMPLOYEE PREVIEW + BARCODE */}
           {generatedEmployee && (
-            <Card className="border-2 border-green-200 bg-green-50">
+            <Card className="border-2 border-green-300 bg-green-50">
               <CardHeader>
-                <CardTitle className="text-green-800 text-base sm:text-lg">
-                  Employee Added Successfully!
-                </CardTitle>
+                <CardTitle>Employee Added!</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 sm:space-y-4">
-                <div className="space-y-2">
-                  <p>
-                    <strong>Name:</strong> {generatedEmployee.name}
-                  </p>
-                  <p>
-                    <strong>Emp Code:</strong> {generatedEmployee.empCode}
-                  </p>
-                  <p>
-                    <strong>Department:</strong>{" "}
-                    {
-                      departments.find((d) => d.id === generatedEmployee.departmentId)?.name
-                    }
-                  </p>
-                  {generatedEmployee.pfId && (
-                    <p>
-                      <strong>PF ID:</strong> {generatedEmployee.pfId}
-                    </p>
-                  )}
-                  {generatedEmployee.esicId && (
-                    <p>
-                      <strong>ESIC ID:</strong> {generatedEmployee.esicId}
-                    </p>
-                  )}
-                  <p>
-                    <strong>Hourly Rate:</strong> ₹{generatedEmployee.hourlyRate}
-                  </p>
+
+              <CardContent className="space-y-3">
+                <p><strong>Name:</strong> {generatedEmployee.name}</p>
+                <p><strong>Emp Code:</strong> {generatedEmployee.empCode}</p>
+                <p>
+                  <strong>Shift:</strong>{" "}
+                  {shiftTypes.find((s) => s.id === generatedEmployee.shiftTypeId)?.name}
+                  {" — "}
+                  {shiftTypes.find((s) => s.id === generatedEmployee.shiftTypeId)?.totalHours} Hrs
+                </p>
+
+                <div
+                  ref={barcodeRef}
+                  className="bg-white p-4 rounded-lg inline-block"
+                >
+                  <Barcode
+                    value={generatedEmployee.empCode}
+                    format="CODE128"
+                    width={2}
+                    height={100}
+                  />
                 </div>
 
-                <div className="text-center space-y-3 sm:space-y-4">
-                  <div
-                    className="bg-white p-3 sm:p-4 rounded-lg inline-block"
-                    ref={barcodeRef}
-                  >
-                    <Barcode
-                      value={generatedEmployee.empCode} // ✅ Use empCode for barcode
-                      format="CODE128"
-                      width={2}
-                      height={100}
-                      fontSize={16}
-                      displayValue={true}
-                      background="#ffffff"
-                      lineColor="#000000"
-                      margin={10}
-                    />
-                  </div>
-
-                  <Button
-                    onClick={() => downloadBarcode(generatedEmployee.empCode)}
-                    variant="outline"
-                    className="w-full"
-                  >
-                    <Download className="h-4 w-4 mr-2" /> Download Barcode
-                  </Button>
-                  <p className="text-xs text-green-700">
-                    Barcode automatically generated from Emp Code. Use this for
-                    attendance scanning.
-                  </p>
-                </div>
+                <Button
+                  onClick={() => downloadBarcode(generatedEmployee.empCode)}
+                  variant="outline"
+                  className="w-full"
+                >
+                  <Download className="h-4 w-4" /> Download Barcode
+                </Button>
               </CardContent>
             </Card>
           )}
