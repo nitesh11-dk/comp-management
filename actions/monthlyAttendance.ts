@@ -30,6 +30,26 @@ function getMonthRange(year: number, month: number) {
 }
 
 /* ----------------------------------------
+   UTIL: Effective cycle end
+----------------------------------------- */
+function getEffectiveCycleEnd(
+  cycleEnd: Date,
+  year: number,
+  month: number
+) {
+  const today = new Date();
+  const { monthEnd } = getMonthRange(year, month);
+
+  return new Date(
+    Math.min(
+      cycleEnd.getTime(),
+      today.getTime(),
+      monthEnd.getTime()
+    )
+  );
+}
+
+/* ----------------------------------------
    UTIL: Sum deductions
 ----------------------------------------- */
 function sumDeductions(deductions?: Record<string, number>) {
@@ -42,7 +62,6 @@ function sumDeductions(deductions?: Record<string, number>) {
 
 /* =========================================================
    1️⃣ READ ONLY — STRICT FILTER
-   (YEAR + MONTH + CYCLE + JOINED DATE)
 ========================================================= */
 export async function getMonthlySummaries(input: {
   year: number;
@@ -70,13 +89,10 @@ export async function getMonthlySummaries(input: {
 
   const { monthEnd } = getMonthRange(year, month);
 
-  // 🔥 EMPLOYEE BASE QUERY (FINAL + CORRECT)
   const employees = await prisma.employee.findMany({
     where: {
       cycleTimingId,
       departmentId: departmentId || undefined,
-
-      // ✅ REAL BUSINESS FILTER
       joinedAt: {
         lte: monthEnd,
       },
@@ -99,29 +115,19 @@ export async function getMonthlySummaries(input: {
 }
 
 /* =========================================================
-   INTERNAL — CALCULATION (MANUAL ONLY)
+   INTERNAL — CALCULATION (CYCLE-AWARE)
 ========================================================= */
 async function calculateOneEmployee({
   employeeId,
   cycleTimingId,
   year,
   month,
-  deductions = {},
-  advanceAmount = 0,
-  pfRate = 0.12,
 }: {
   employeeId: string;
   cycleTimingId: string;
   year: number;
   month: number;
-  deductions?: Record<string, number>;
-  advanceAmount?: number;
-  pfRate?: number;
 }) {
-  if (!employeeId || !cycleTimingId || !year || !month) {
-    throw new Error("Employee, Year, Month, Cycle required");
-  }
-
   const employee = await prisma.employee.findUnique({
     where: { id: employeeId },
   });
@@ -139,10 +145,28 @@ async function calculateOneEmployee({
     cycle.lengthDays
   );
 
-  // 🛑 SAFETY CHECK (IMPORTANT)
+  // ❌ Not eligible for this cycle
   if (employee.joinedAt > cycleEnd) {
-    throw new Error("Employee not joined in this cycle");
+    return null;
   }
+
+  // ✅ Effective end (IMPORTANT)
+  const effectiveCycleEnd = getEffectiveCycleEnd(
+    cycleEnd,
+    year,
+    month
+  );
+
+  // 🔍 Existing summary (manual values preserve)
+  const existingSummary =
+    await prisma.monthlyAttendanceSummary.findUnique({
+      where: {
+        employeeId_cycleStart: {
+          employeeId,
+          cycleStart,
+        },
+      },
+    });
 
   const wallet = await prisma.attendanceWallet.findUnique({
     where: { employeeId },
@@ -151,7 +175,7 @@ async function calculateOneEmployee({
         where: {
           timestamp: {
             gte: cycleStart,
-            lte: cycleEnd,
+            lte: effectiveCycleEnd,
           },
         },
         orderBy: { timestamp: "asc" },
@@ -167,24 +191,33 @@ async function calculateOneEmployee({
   );
 
   const daysPresent = workLogs.length;
-  const daysAbsent = cycle.lengthDays - daysPresent;
+
+  const daysInCycle =
+    Math.floor(
+      (effectiveCycleEnd.getTime() - cycleStart.getTime()) /
+        (1000 * 60 * 60 * 24)
+    ) + 1;
+
+  const daysAbsent = Math.max(0, daysInCycle - daysPresent);
 
   const totalHours = workLogs.reduce(
     (sum, d) => sum + d.totalHours,
     0
   );
 
-  const overtimeHours = Math.max(0, totalHours - cycle.lengthDays * 8);
-
-  const grossSalary =
-    Math.round(totalHours * employee.hourlyRate * 100) / 100;
-
-  const pfAmount =
-    Math.round(grossSalary * pfRate * 100) / 100;
+  // 🔒 Manual values
+  const overtimeHours = existingSummary?.overtimeHours ?? 0;
+  const advanceAmount = existingSummary?.advanceAmount ?? 0;
+  const deductions = (existingSummary?.deductions as any) ?? {
+    shoes: 0,
+    canteen: 0,
+  };
 
   const netSalary =
-    grossSalary -
-    pfAmount -
+    Math.round(
+      (totalHours + overtimeHours) * employee.hourlyRate * 100
+    ) /
+      100 -
     advanceAmount -
     sumDeductions(deductions);
 
@@ -196,31 +229,28 @@ async function calculateOneEmployee({
       },
     },
     update: {
+      daysInCycle,
       daysPresent,
       daysAbsent,
       totalHours,
-      overtimeHours,
       hourlyRate: employee.hourlyRate,
-      grossSalary,
-      pfAmount,
+      netSalary,
+      overtimeHours,
       advanceAmount,
       deductions,
-      netSalary,
     },
     create: {
       employeeId,
       cycleStart,
       cycleEnd,
-      daysInCycle: cycle.lengthDays,
+      daysInCycle,
       daysPresent,
       daysAbsent,
       totalHours,
-      overtimeHours,
       hourlyRate: employee.hourlyRate,
-      grossSalary,
-      pfAmount,
-      advanceAmount,
-      deductions,
+      overtimeHours: 0,
+      advanceAmount: 0,
+      deductions: { shoes: 0, canteen: 0 },
       netSalary,
     },
   });
@@ -242,7 +272,7 @@ export async function calculateMonthlyForEmployee(input: {
 }
 
 /* =========================================================
-   BUTTON: ALL EMPLOYEES (STRICT)
+   BUTTON: ALL EMPLOYEES
 ========================================================= */
 export async function calculateMonthlyForAllEmployees(input: {
   cycleTimingId: string;
@@ -251,10 +281,6 @@ export async function calculateMonthlyForAllEmployees(input: {
   departmentId?: string;
 }) {
   const { cycleTimingId, year, month, departmentId } = input;
-
-  if (!cycleTimingId || !year || !month) {
-    throw new Error("Year, Month and Cycle required");
-  }
 
   const employees = await prisma.employee.findMany({
     where: {

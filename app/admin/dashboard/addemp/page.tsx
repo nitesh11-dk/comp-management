@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
 import Barcode from "react-barcode";
 import html2canvas from "html2canvas";
 
@@ -14,41 +13,53 @@ import { getDepartments } from "@/actions/department";
 import { getShiftTypes } from "@/actions/shiftType";
 import { getCycleTimings } from "@/actions/cycleTimings";
 
-import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardContent,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Download } from "lucide-react";
 
-/* ---------------- Zod schema ---------------- */
+/* ---------------- ZOD SCHEMA ---------------- */
 const employeeSchema = z.object({
-  name: z.string().min(3, "Name must be at least 3 characters"),
-  aadhaarNumber: z.string().regex(/^\d{12}$/, "Aadhaar must be 12 digits"),
-  mobile: z.string().regex(/^\d{10}$/, "Mobile must be 10 digits"),
+  name: z.string().min(3),
+  aadhaarNumber: z.string().regex(/^\d{12}$/),
+  mobile: z.string().regex(/^\d{10}$/),
 
-  departmentId: z.string().min(1, "Department required"),
+  departmentId: z.string().min(1),
 
-  shiftTypeId: z.string().nullable().optional(),
-  cycleTimingId: z.string().nullable().optional(),
+  shiftTypeId: z.string().nullable(),
+  cycleTimingId: z.string().nullable(),
 
-  pfId: z.string().nullable().optional(),
-  pfActive: z.boolean().optional().default(true),
+  pfId: z.string().nullable(),
+  pfActive: z.boolean().optional(),
 
-  esicId: z.string().nullable().optional(),
-  esicActive: z.boolean().optional().default(true),
+  esicId: z.string().nullable(),
+  esicActive: z.boolean().optional(),
 
-  panNumber: z.string().nullable().optional(),
- joinedDate: z.string().min(1, "Joining date is required"), // ✅ ADD THIS
-  dob: z.string().nullable().optional(),
-  currentAddress: z.string().nullable().optional(),
-  permanentAddress: z.string().nullable().optional(),
+  panNumber: z.string().nullable(),
 
-  bankAccountNumber: z.string().nullable().optional(),
-  ifscCode: z.string().nullable().optional(),
+  joinedAt: z.string().min(1),
 
- 
+  dob: z.string().nullable(),
+  currentAddress: z.string().nullable(),
+  permanentAddress: z.string().nullable(),
+
+  bankAccountNumber: z.string().nullable(),
+  ifscCode: z.string().nullable(),
+
   hourlyRate: z.number().positive(),
 });
 
@@ -61,7 +72,8 @@ export default function AddEmployeePage() {
   const [shiftTypes, setShiftTypes] = useState<any[]>([]);
   const [cycleTimings, setCycleTimings] = useState<any[]>([]);
 
-  const [generatedEmployee, setGeneratedEmployee] = useState<any | null>(null);
+  const [loadingMaster, setLoadingMaster] = useState(true);
+  const [generatedEmployee, setGeneratedEmployee] = useState<any>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<"success" | "error">("success");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -69,87 +81,86 @@ export default function AddEmployeePage() {
   const {
     control,
     handleSubmit,
-    reset,
     register,
+    reset,
     formState: { errors },
   } = useForm<EmployeeFormValues>({
     resolver: zodResolver(employeeSchema),
-   defaultValues: {
-  name: "",
-  aadhaarNumber: "",
-  mobile: "",
-  joinedDate: "", // ✅ ADD
+    defaultValues: {
+      name: "",
+      aadhaarNumber: "",
+      mobile: "",
+      joinedAt: "",
 
-  departmentId: "",
-  shiftTypeId: null,
-  cycleTimingId: null,
+      departmentId: "",
+      shiftTypeId: null,
+      cycleTimingId: null,
 
-  pfId: null,
-  pfActive: true,
-  esicId: null,
-  esicActive: true,
-  panNumber: null,
+      pfId: null,
+      pfActive: true,
+      esicId: null,
+      esicActive: true,
+      panNumber: null,
 
-  dob: null,
-  currentAddress: null,
-  permanentAddress: null,
+      dob: null,
+      currentAddress: null,
+      permanentAddress: null,
 
-  bankAccountNumber: null,
-  ifscCode: null,
+      bankAccountNumber: null,
+      ifscCode: null,
 
-  hourlyRate: 0,
-},
-
+      hourlyRate: 0,
+    },
   });
 
-  /* ---------------- Fetch master data ---------------- */
+  /* ---------------- FETCH MASTER DATA ---------------- */
   useEffect(() => {
     (async () => {
-      const d = await getDepartments();
-      const s = await getShiftTypes();
-      const c = await getCycleTimings();
+      setLoadingMaster(true);
+
+      const [d, s, c] = await Promise.all([
+        getDepartments(),
+        getShiftTypes(),
+        getCycleTimings(),
+      ]);
 
       if (d.success) setDepartments(d.data);
       if (s.success) setShiftTypes(s.data);
       if (c.success) setCycleTimings(c.data);
+
+      setLoadingMaster(false);
     })();
   }, []);
 
-  /* ---------------- Download Barcode ---------------- */
-  const downloadBarcode = async (empCode: string) => {
+  /* ---------------- BARCODE ---------------- */
+  const downloadBarcode = async (code: string) => {
     if (!barcodeRef.current) return;
-
     const canvas = await html2canvas(barcodeRef.current, { scale: 2 });
     const link = document.createElement("a");
-    link.download = `${empCode}_barcode.png`;
     link.href = canvas.toDataURL();
+    link.download = `${code}.png`;
     link.click();
   };
 
-  /* ---------------- Submit Handler ---------------- */
+  /* ---------------- SUBMIT ---------------- */
   const onSubmit = async (data: EmployeeFormValues) => {
     setIsSubmitting(true);
     setMessage(null);
 
-    const payload = {
+    const res = await createEmployeeAction({
       ...data,
-        joinedDate: data.joinedDate, 
       aadhaarNumber: String(data.aadhaarNumber),
       mobile: String(data.mobile),
       hourlyRate: Number(data.hourlyRate),
       dob: data.dob || null,
-    };
-
-    const res = await createEmployeeAction(payload);
+    });
 
     if (res.success) {
       setGeneratedEmployee(res.data);
-      setMessage("Employee created successfully!");
+      setMessage("Employee created successfully");
       setMessageType("success");
       reset();
-
-      // Auto download after a short delay
-      setTimeout(() => downloadBarcode(res.data.empCode), 400);
+      setTimeout(() => downloadBarcode(res.data.empCode), 300);
     } else {
       setMessage(res.message);
       setMessageType("error");
@@ -158,178 +169,100 @@ export default function AddEmployeePage() {
     setIsSubmitting(false);
   };
 
+  /* ---------------- LOADER ---------------- */
+  if (loadingMaster) {
+    return (
+      <div className="h-[60vh] flex items-center justify-center text-gray-500">
+        Loading departments, shift types & cycle timings...
+      </div>
+    );
+  }
+
+  /* ---------------- UI ---------------- */
   return (
-    <div className="p-4 max-w-4xl mx-auto space-y-4">
+    <div className="p-4 max-w-5xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold">Add Employee</h1>
 
       <Card>
         <CardHeader>
-          <CardTitle>Add Employee</CardTitle>
+          <CardTitle>Employee Details</CardTitle>
         </CardHeader>
 
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
 
-            {/* Name */}
-            <div>
-              <Label>Name</Label>
+            {/* BASIC */}
+            <InputBlock label="Name" error={errors.name?.message}>
               <Input {...register("name")} />
-              {errors.name && <p className="text-red-600">{errors.name.message}</p>}
-            </div>
+            </InputBlock>
 
-            {/* Aadhaar */}
-            <div>
-              <Label>Aadhaar</Label>
+            <InputBlock label="Aadhaar" error={errors.aadhaarNumber?.message}>
               <Input {...register("aadhaarNumber")} maxLength={12} />
-              {errors.aadhaarNumber && <p className="text-red-600">{errors.aadhaarNumber.message}</p>}
-            </div>
+            </InputBlock>
 
-            {/* Mobile */}
-            <div>
-              <Label>Mobile</Label>
+            <InputBlock label="Mobile" error={errors.mobile?.message}>
               <Input {...register("mobile")} maxLength={10} />
-              {errors.mobile && <p className="text-red-600">{errors.mobile.message}</p>}
-            </div>
+            </InputBlock>
 
-            {/* Department */}
-            <div>
-              <Label>Department</Label>
-              <Controller
-                name="departmentId"
-                control={control}
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
-                    <SelectContent>
-                      {departments.map((d) => (
-                        <SelectItem key={d.id} value={d.id}>
-                          {d.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              {errors.departmentId && <p className="text-red-600">{errors.departmentId.message}</p>}
-            </div>
+            <InputBlock label="Joining Date" error={errors.joinedAt?.message}>
+              <Input type="date" {...register("joinedAt")} />
+            </InputBlock>
 
-            {/* Shift Type */}
-            <div>
-              <Label>Shift Type</Label>
-              <Controller
-                name="shiftTypeId"
-                control={control}
-                render={({ field }) => (
-                  <Select
-                    value={field.value ?? "null"}
-                    onValueChange={(v) => field.onChange(v === "null" ? null : v)}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Select shift" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="null">None</SelectItem>
+            {/* DEPARTMENT */}
+            <SelectBlock
+              label="Department"
+              name="departmentId"
+              control={control}
+              items={departments}
+            />
 
-                      {shiftTypes.map((s) => (
-                        <SelectItem key={s.id} value={s.id}>
-                          {s.name} ({s.totalHours} hrs)
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </div>
+            <SelectBlock
+              label="Shift Type"
+              name="shiftTypeId"
+              control={control}
+              items={shiftTypes}
+              nullable
+              render={(s) => `${s.name} (${s.totalHours} hrs)`}
+            />
 
-            {/* Cycle Timing */}
-            <div>
-              <Label>Cycle Timing</Label>
-              <Controller
-                name="cycleTimingId"
-                control={control}
-                render={({ field }) => (
-                  <Select
-                    value={field.value ?? "null"}
-                    onValueChange={(v) => field.onChange(v === "null" ? null : v)}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Select cycle timing" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="null">None</SelectItem>
+            <SelectBlock
+              label="Cycle Timing"
+              name="cycleTimingId"
+              control={control}
+              items={cycleTimings}
+              nullable
+              render={(c) => `${c.name} (Start ${c.startDay})`}
+            />
 
-                      {cycleTimings.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name} (Start: {c.startDay})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </div>
+            {/* PAY */}
+            <InputBlock label="Hourly Rate">
+              <Input type="number" {...register("hourlyRate", { valueAsNumber: true })} />
+            </InputBlock>
 
-            {/* Hourly Rate */}
-            <div>
-              <Label>Hourly Rate</Label>
-              <Input
-                type="number"
-                step="0.01"
-                {...register("hourlyRate", { valueAsNumber: true })}
-              />
-              {errors.hourlyRate && <p className="text-red-600">{errors.hourlyRate.message}</p>}
-            </div>
-
-            {/* IDs */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-              <div>
-                <Label>PF ID</Label>
-                <Input {...register("pfId")} />
-              </div>
-
-              <div>
-                <Label>ESIC ID</Label>
-                <Input {...register("esicId")} />
-              </div>
-
-              <div>
-                <Label>PAN Number</Label>
-                <Input {...register("panNumber")} />
-              </div>
-            </div>
-
-            {/* DOB */}
-            <div>
-              <Label>Date of Birth</Label>
-              <Input type="date" {...register("dob")} />
-              
-            </div>
+{/* DOB */}
 <div>
-  <Label>Joining Date</Label>
-  <Input type="date" {...register("joinedDate")} />
-  {errors.joinedDate && (
-    <p className="text-red-600">{errors.joinedDate.message}</p>
+  <Label>Date of Birth</Label>
+  <Input type="date" {...register("dob")} />
+  {errors.dob && (
+    <p className="text-red-600">{errors.dob.message}</p>
   )}
 </div>
-            {/* Address */}
-            <div>
-              <Label>Current Address</Label>
-              <Input {...register("currentAddress")} />
+
+            {/* IDS */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              <Input {...register("pfId")} placeholder="PF ID" />
+              <Input {...register("esicId")} placeholder="ESIC ID" />
+              <Input {...register("panNumber")} placeholder="PAN" />
             </div>
 
-            <div>
-              <Label>Permanent Address</Label>
-              <Input {...register("permanentAddress")} />
-            </div>
+            {/* ADDRESS */}
+            <Input {...register("currentAddress")} placeholder="Current Address" />
+            <Input {...register("permanentAddress")} placeholder="Permanent Address" />
 
-            {/* Bank */}
-            <div>
-              <Label>Bank Account Number</Label>
-              <Input {...register("bankAccountNumber")} />
-            </div>
+            {/* BANK */}
+            <Input {...register("bankAccountNumber")} placeholder="Bank Account" />
+            <Input {...register("ifscCode")} placeholder="IFSC Code" />
 
-            <div>
-              <Label>IFSC Code</Label>
-              <Input {...register("ifscCode")} />
-            </div>
-
-            {/* Message */}
             {message && (
               <Alert variant={messageType === "error" ? "destructive" : "default"}>
                 <AlertDescription>{message}</AlertDescription>
@@ -337,33 +270,74 @@ export default function AddEmployeePage() {
             )}
 
             <Button type="submit" disabled={isSubmitting} className="w-full">
-              {isSubmitting ? "Saving..." : "Add Employee"}
+              {isSubmitting ? "Saving..." : "Create Employee"}
             </Button>
           </form>
         </CardContent>
       </Card>
 
-      {/* SUCCESS CARD */}
       {generatedEmployee && (
-        <Card className="border-green-500 border bg-green-50">
-          <CardHeader>
-            <CardTitle>Employee Created</CardTitle>
-          </CardHeader>
-
+        <Card className="bg-green-50 border-green-500 border">
           <CardContent className="space-y-2">
             <p><b>Name:</b> {generatedEmployee.name}</p>
             <p><b>Code:</b> {generatedEmployee.empCode}</p>
-
             <div ref={barcodeRef} className="inline-block bg-white p-4">
               <Barcode value={generatedEmployee.empCode} />
             </div>
-
             <Button onClick={() => downloadBarcode(generatedEmployee.empCode)}>
               <Download /> Download Barcode
             </Button>
           </CardContent>
         </Card>
       )}
+    </div>
+  );
+}
+
+/* ---------------- SMALL HELPERS ---------------- */
+function InputBlock({ label, error, children }: any) {
+  return (
+    <div>
+      <Label>{label}</Label>
+      {children}
+      {error && <p className="text-red-600">{error}</p>}
+    </div>
+  );
+}
+
+function SelectBlock({
+  label,
+  name,
+  control,
+  items,
+  nullable,
+  render = (i: any) => i.name,
+}: any) {
+  return (
+    <div>
+      <Label>{label}</Label>
+      <Controller
+        name={name}
+        control={control}
+        render={({ field }) => (
+          <Select
+            value={field.value ?? "null"}
+            onValueChange={(v) => field.onChange(v === "null" ? null : v)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={`Select ${label}`} />
+            </SelectTrigger>
+            <SelectContent>
+              {nullable && <SelectItem value="null">None</SelectItem>}
+              {items.map((i: any) => (
+                <SelectItem key={i.id} value={i.id}>
+                  {render(i)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      />
     </div>
   );
 }

@@ -1,7 +1,9 @@
 "use server";
 
-import prisma from "@/lib/prisma";
 import { createEmployee } from "@/actions/employeeActions";
+import { getDepartments } from "@/actions/department";
+import { getShiftTypes } from "@/actions/shiftType";
+import { getCycleTimings } from "@/actions/cycleTimings";
 
 // --------------------------------------------------
 // utils
@@ -19,67 +21,97 @@ function randomMobile() {
 }
 
 function randomPAN() {
-  return `ABCDE${randomBetween(1000, 9999)}F`;
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  return (
+    chars[randomBetween(0, 25)] +
+    chars[randomBetween(0, 25)] +
+    chars[randomBetween(0, 25)] +
+    chars[randomBetween(0, 25)] +
+    chars[randomBetween(0, 25)] +
+    randomBetween(1000, 9999) +
+    chars[randomBetween(0, 25)]
+  );
 }
 
 // --------------------------------------------------
-// CREATE FAKE EMPLOYEES (SAFE)
+// CREATE FAKE EMPLOYEES (FINAL FIXED)
 // --------------------------------------------------
-export async function createFakeEmployees(count: number = 12) {
-  // ----------------------------------------------
-  // 1️⃣ Load master data
-  // ----------------------------------------------
-  const department = await prisma.department.findFirst();
-  if (!department) throw new Error("❌ No department exists");
+export async function createFakeEmployees(count: number = 5) {
+  try {
+    // 1️⃣ Load master data via ACTIONS
+    const deptRes = await getDepartments();
+    if (!deptRes.success || !deptRes.data?.length) {
+      throw new Error("❌ No departments found");
+    }
 
-  const shiftType = await prisma.shiftType.findFirst();
-  const cycleTiming = await prisma.cycleTiming.findFirst();
+    const shiftRes = await getShiftTypes();
+    const cycleRes = await getCycleTimings();
 
-  // ----------------------------------------------
-  // 2️⃣ Create employees via existing action
-  // ----------------------------------------------
-  const created: any[] = [];
+    const department = deptRes.data[0];
+    const shiftType = shiftRes.success ? shiftRes.data?.[0] : null;
+    const cycleTiming = cycleRes.success ? cycleRes.data?.[0] : null;
 
-  for (let i = 0; i < count; i++) {
-    const payload = {
-      name: `Demo Employee ${Date.now()}-${i}`,
+    // 2️⃣ Create fake employees
+    const created: any[] = [];
 
-      aadhaarNumber: randomAadhaar(),
-      mobile: randomMobile(),
+    for (let i = 0; i < count; i++) {
+      const joinedDate = new Date(
+        randomBetween(2023, 2025),
+        randomBetween(0, 11),
+        randomBetween(1, 28)
+      );
 
-      departmentId: department.id,
-      shiftTypeId: shiftType?.id ?? null,
-      cycleTimingId: cycleTiming?.id ?? null,
+      const payload = {
+        name: `Demo Employee ${Date.now()}-${i}`,
 
-      pfId: `PF${randomBetween(10000, 99999)}`,
-      esicId: `ESIC${randomBetween(10000, 99999)}`,
-      panNumber: randomPAN(),
+        aadhaarNumber: randomAadhaar(),
+        mobile: randomMobile(),
 
-      dob: "1996-06-15",
-      currentAddress: "Demo Address, City",
-      permanentAddress: "Demo Address, City",
+        departmentId: department.id,
+        shiftTypeId: shiftType?.id ?? null,
+        cycleTimingId: cycleTiming?.id ?? null,
 
-      bankAccountNumber: `${randomBetween(1000000000, 9999999999)}`,
-      ifscCode: "HDFC0001234",
+        pfId: `PF${Date.now()}${i}`,
+        esicId: `ESIC${Date.now()}${i}`,
+        panNumber: randomPAN(),
 
-      hourlyRate: randomBetween(80, 160),
-    };
+        dob: "1996-06-15",
+        currentAddress: "Demo Address, City",
+        permanentAddress: "Demo Address, City",
 
-    // ✅ SINGLE SOURCE OF TRUTH
-    const res = await createEmployee(payload);
+        bankAccountNumber: `${randomBetween(1000000000, 9999999999)}`,
+        ifscCode: "HDFC0001234",
 
-    if (res.success) {
+        hourlyRate: randomBetween(80, 160),
+
+        // ✅ FINAL FIX: ISO STRING (NOT Date object)
+        joinedAt: joinedDate.toISOString(),
+      };
+
+      const res = await createEmployee(payload);
+
+      if (!res?.success) {
+        console.error("❌ Fake employee create failed:", res);
+        continue;
+      }
+
       created.push(res.data);
     }
-  }
 
-  return {
-    success: true,
-    message: `✅ ${created.length} fake employees created`,
-    employees: created.map((e) => ({
-      id: e.id,
-      empCode: e.empCode,
-      name: e.name,
-    })),
-  };
+    return {
+      success: true,
+      message: `✅ ${created.length} fake employees created`,
+      employees: created.map((e) => ({
+        id: e.id,
+        empCode: e.empCode,
+        name: e.name,
+      })),
+    };
+  } catch (err: any) {
+    console.error("❌ createFakeEmployees error:", err);
+    return {
+      success: false,
+      message: err.message ?? "Failed to create fake employees",
+    };
+  }
 }

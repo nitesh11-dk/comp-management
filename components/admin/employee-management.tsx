@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import {  } from "@/actions/employeeActions";
+import { getEmployees } from "@/actions/employeeActions";
 import { getDepartments } from "@/actions/department";
 import { Button } from "@/components/ui/button";
 import { Download, Eye, Edit } from "lucide-react";

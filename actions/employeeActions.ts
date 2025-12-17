@@ -28,7 +28,7 @@ async function generateUniqueEmpCode(): Promise<string> {
 function serializeEmployee(emp: any) {
   return {
     ...emp,
-    joinedDate: emp.joinedDate?.toISOString() ?? null,
+    joinedAt: emp.joinedAt?.toISOString() ?? null,
     createdAt: emp.createdAt?.toISOString(),
     updatedAt: emp.updatedAt?.toISOString(),
     dob: emp.dob ? emp.dob.toISOString() : null,
@@ -46,12 +46,12 @@ export async function createEmployee(
       return { success: false, message: "Name must be at least 3 characters" };
     }
 
-    if (!data.joinedDate) {
+    if (!data.joinedAt) {
       return { success: false, message: "Joining date is required" };
     }
 
-    const joinedDate = new Date(data.joinedDate);
-    if (isNaN(joinedDate.getTime())) {
+    const joinedAt = new Date(data.joinedAt);
+    if (isNaN(joinedAt.getTime())) {
       return { success: false, message: "Invalid joining date" };
     }
 
@@ -69,7 +69,7 @@ export async function createEmployee(
       data: {
         empCode,
         name: data.name,
-        joinedDate,
+        joinedAt,
 
         aadhaarNumber: String(data.aadhaarNumber),
         mobile: String(data.mobile),
@@ -158,8 +158,8 @@ export async function updateEmployee(
   updates: any
 ): Promise<ActionResponse<any>> {
   try {
-    if (updates.joinedDate)
-      updates.joinedDate = new Date(updates.joinedDate);
+    if (updates.joinedAt)
+      updates.joinedAt = new Date(updates.joinedAt);
 
     if (updates.dob)
       updates.dob = new Date(updates.dob);

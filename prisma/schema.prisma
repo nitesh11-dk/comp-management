@@ -126,27 +126,29 @@ model MonthlyAttendanceSummary {
 
   daysInCycle   Int
   daysPresent   Int
-  daysAbsent    Int      // ✅ NEW (derived, Excel match)
+  daysAbsent    Int
 
   totalHours    Float
-  overtimeHours Float    @default(0) // ✅ NEW (OT)
+  overtimeHours Float    @default(0)
 
   hourlyRate    Float
-  grossSalary   Float
 
-  advanceAmount Float    @default(0) // ✅ NEW (Advn.)
-  pfAmount      Float    @default(0) // ✅ NEW (PF)
+  advanceAmount Float    @default(0)
 
-  deductions    Json?    // shoes, canteen, uniform
+  // Default deductions structure:
+  // { "shoes": 0, "canteen": 0 }
+  deductions    Json     @default("{\"shoes\":0,\"canteen\":0}")
+
   netSalary     Float
 
   generatedAt   DateTime @default(now())
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@unique([employeeId, cycleStart])
 }
+
 
 
 //

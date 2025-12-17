@@ -1,28 +1,41 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 
 import EmployeeManagement from "@/components/admin/employee-management";
 import AdminAttendanceDashboardV2 from "@/components/admin/NewDash";
+import { createFakeEmployees } from "@/actions/createFakeEmployee";
 
 const Page = () => {
   const router = useRouter();
 
   // 🔑 VIEW STATE
-  const [view, setView] = useState<"attendance" | "employees">(
-    "attendance"
-  );
+  const [view, setView] = useState<"attendance" | "employees">("attendance");
+
+  // 🔄 SERVER ACTION STATE
+  const [isPending, startTransition] = useTransition();
+
+  const handleCreateFakeEmployees = () => {
+    startTransition(async () => {
+      const res = await createFakeEmployees(5);
+
+      if (!res.success) {
+        alert(res.message || "Failed to create fake employees");
+        return;
+      }
+
+      alert(res.message);
+    });
+  };
 
   return (
     <div className="p-6 space-y-6">
-
       {/* ===============================
          TOP ACTION BAR
       =============================== */}
       <div className="flex flex-wrap gap-3 items-center">
-
         {/* VIEW SELECT */}
         <select
           value={view}
@@ -41,6 +54,13 @@ const Page = () => {
           onClick={() => router.push("/admin/dashboard/departments")}
         >
           Manage Departments
+        </Button>
+
+        <Button
+          disabled={isPending}
+          onClick={handleCreateFakeEmployees}
+        >
+          {isPending ? "Creating..." : "Create Fake Employees"}
         </Button>
 
         <Button

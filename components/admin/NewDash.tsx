@@ -26,15 +26,12 @@ export default function AdminAttendanceDashboardV2() {
   const [rows, setRows] = useState<Row[]>([]);
 
   /* ============================
-     DRAFT FILTERS (UI)
+     FILTERS
   ============================ */
   const [draftMonth, setDraftMonth] = useState(now.getMonth() + 1);
   const [draftYear, setDraftYear] = useState(now.getFullYear());
   const [draftCycleId, setDraftCycleId] = useState<string>("all");
 
-  /* ============================
-     APPLIED FILTERS
-  ============================ */
   const [appliedFilters, setAppliedFilters] = useState<{
     month: number;
     year: number;
@@ -42,11 +39,10 @@ export default function AdminAttendanceDashboardV2() {
   } | null>(null);
 
   /* ============================
-     LOADING STATES
+     LOADING
   ============================ */
   const [loading, setLoading] = useState(false);
   const [recalcLoading, setRecalcLoading] = useState<string | null>(null);
-
   const isBusy = loading || recalcLoading !== null;
 
   /* ============================
@@ -58,8 +54,11 @@ export default function AdminAttendanceDashboardV2() {
     return d;
   };
 
+  const getCycleById = (id: string) =>
+    cycles.find((c) => c.id === id);
+
   /* ============================
-     LOAD CYCLES ONCE
+     LOAD CYCLES
   ============================ */
   useEffect(() => {
     (async () => {
@@ -72,11 +71,10 @@ export default function AdminAttendanceDashboardV2() {
   }, []);
 
   /* ============================
-     SEARCH CLICK
+     SEARCH
   ============================ */
   const onSearch = () => {
     if (!draftMonth || !draftYear || !draftCycleId) return;
-
     setAppliedFilters({
       month: draftMonth,
       year: draftYear,
@@ -111,20 +109,15 @@ export default function AdminAttendanceDashboardV2() {
         );
 
         const flat = responses.flat();
+        result = flat.filter(
+          (r) => new Date(r.employee.joinedAt) <= monthEnd
+        );
 
-        // ✅ FIX: joinedAt (NOT createdAt)
-        result = flat.filter((r) => {
-          const joined = new Date(r.employee.joinedAt);
-          return joined <= monthEnd;
-        });
-
-        // dedupe
         const map = new Map<string, Row>();
         for (const r of result) {
           const key = `${r.employee.id}-${r.summary?.cycleStart ?? "none"}`;
           map.set(key, r);
         }
-
         result = Array.from(map.values());
       } else {
         const data = await getMonthlySummaries({
@@ -133,28 +126,19 @@ export default function AdminAttendanceDashboardV2() {
           cycleTimingId: cycleId,
         });
 
-        result = data.filter((r) => {
-          const joined = new Date(r.employee.joinedAt);
-          return joined <= monthEnd;
-        });
+        result = data.filter(
+          (r) => new Date(r.employee.joinedAt) <= monthEnd
+        );
       }
 
-      if (reqId !== requestIdRef.current) return;
-      setRows(result);
-    } catch (err) {
-      console.error(err);
-      if (reqId === requestIdRef.current) setRows([]);
+      if (reqId === requestIdRef.current) setRows(result);
     } finally {
       if (reqId === requestIdRef.current) setLoading(false);
     }
   };
 
-  /* ============================
-     LOAD AFTER SEARCH
-  ============================ */
   useEffect(() => {
     if (!appliedFilters || cycles.length === 0) return;
-
     loadDashboard(
       appliedFilters.month,
       appliedFilters.year,
@@ -163,7 +147,7 @@ export default function AdminAttendanceDashboardV2() {
   }, [appliedFilters]);
 
   /* ============================
-     RECALCULATE ALL
+     RECALC
   ============================ */
   const recalcAll = async () => {
     if (!appliedFilters) return;
@@ -196,9 +180,6 @@ export default function AdminAttendanceDashboardV2() {
     }
   };
 
-  /* ============================
-     RECALCULATE ONE
-  ============================ */
   const recalcOne = async (employee: any) => {
     if (!appliedFilters) return;
     setRecalcLoading(employee.id);
@@ -233,7 +214,7 @@ export default function AdminAttendanceDashboardV2() {
   ============================ */
   return (
     <div className="space-y-4 p-4">
-      <h2 className="text-xl font-bold">Monthly Attendance Dashboard (V2)</h2>
+      <h2 className="text-xl font-bold">Monthly Attendance Dashboard</h2>
 
       {/* FILTER BAR */}
       <div className="flex flex-wrap gap-2 items-center">
@@ -254,14 +235,13 @@ export default function AdminAttendanceDashboardV2() {
         <select disabled={isBusy} value={draftCycleId} onChange={(e) => setDraftCycleId(e.target.value)}>
           <option value="all">All Cycles</option>
           {cycles.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
           ))}
         </select>
 
-        <Button disabled={isBusy} onClick={onSearch}>
-          🔍 Search
-        </Button>
-
+        <Button disabled={isBusy} onClick={onSearch}>🔍 Search</Button>
         <Button variant="destructive" disabled={isBusy || !appliedFilters} onClick={recalcAll}>
           {recalcLoading === "ALL" ? "Calculating..." : "🔄 Recalculate All"}
         </Button>
@@ -269,22 +249,20 @@ export default function AdminAttendanceDashboardV2() {
 
       {/* TABLE */}
       <div className="overflow-auto border rounded">
-        <table className="min-w-[1400px] w-full text-sm">
+        <table className="min-w-[1450px] w-full text-sm">
           <thead className="bg-gray-100">
             <tr>
               <th>Name</th>
-              <th>Aadhaar</th>
-              <th>PF</th>
+              <th>PF ID</th>
+              <th>Cycle</th>
               <th>Present</th>
               <th>Absent</th>
-              <th>Total</th>
+              <th>Total Hrs</th>
               <th>OT</th>
               <th>Rate</th>
-              <th>Gross</th>
-              <th>PF</th>
               <th>Advance</th>
               <th>Deductions</th>
-              <th>Net</th>
+              <th>Net Salary</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -292,43 +270,67 @@ export default function AdminAttendanceDashboardV2() {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={14} className="text-center p-6">Loading data...</td>
+                <td colSpan={12} className="text-center p-6">
+                  Loading data...
+                </td>
               </tr>
             )}
 
             {!loading &&
-              rows.map(({ employee, summary }) => (
-                <tr key={employee.id}>
-                  <td>{employee.name}</td>
-                  <td>{employee.aadhaarNumber}</td>
-                  <td>{employee.pfId || "-"}</td>
+              rows.map(({ employee, summary }) => {
+                const cycle = getCycleById(employee.cycleTimingId);
 
-                  {summary ? (
-                    <>
-                      <td>{summary.daysPresent}</td>
-                      <td>{summary.daysAbsent}</td>
-                      <td>{summary.totalHours}</td>
-                      <td>{summary.overtimeHours}</td>
-                      <td>₹{summary.hourlyRate}</td>
-                      <td>₹{summary.grossSalary}</td>
-                      <td>₹{summary.pfAmount}</td>
-                      <td>₹{summary.advanceAmount}</td>
-                      <td>₹{summary.deductions ? Object.values(summary.deductions).reduce((a:any,b:any)=>a+b,0) : 0}</td>
-                      <td className="font-semibold">₹{summary.netSalary}</td>
-                    </>
-                  ) : (
-                    <td colSpan={9} className="text-center text-gray-400">
-                      Not calculated
+                return (
+                  <tr key={employee.id}>
+                    <td>{employee.name}</td>
+                    <td>{employee.pfId || "-"}</td>
+
+                    <td className="text-xs">
+                      {cycle?.name}
+                      {summary && (
+                        <div className="text-gray-500">
+                          {format(new Date(summary.cycleStart), "dd MMM yyyy")}
+                          {" → "}
+                          {format(new Date(summary.cycleEnd), "dd MMM yyyy")}
+                        </div>
+                      )}
                     </td>
-                  )}
 
-                  <td>
-                    <Button size="sm" disabled={isBusy} onClick={() => recalcOne(employee)}>
-                      🔄
-                    </Button>
-                  </td>
-                </tr>
-              ))}
+                    {summary ? (
+                      <>
+                        <td>{summary.daysPresent}</td>
+                        <td>{summary.daysAbsent}</td>
+                        <td>{summary.totalHours}</td>
+                        <td>{summary.overtimeHours}</td>
+                        <td>₹{summary.hourlyRate}</td>
+                        <td>₹{summary.advanceAmount}</td>
+                        <td>
+                          ₹
+                          {Object.values(summary.deductions || {}).reduce(
+                            (a: number, b: any) => a + Number(b || 0),
+                            0
+                          )}
+                        </td>
+                        <td className="font-semibold">₹{summary.netSalary}</td>
+                      </>
+                    ) : (
+                      <td colSpan={8} className="text-center text-gray-400">
+                        Not calculated
+                      </td>
+                    )}
+
+                    <td>
+                      <Button
+                        size="sm"
+                        disabled={isBusy}
+                        onClick={() => recalcOne(employee)}
+                      >
+                        🔄
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
           </tbody>
         </table>
       </div>
