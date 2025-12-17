@@ -40,7 +40,7 @@ const employeeSchema = z.object({
   esicActive: z.boolean().optional().default(true),
 
   panNumber: z.string().nullable().optional(),
-
+ joinedDate: z.string().min(1, "Joining date is required"), // ✅ ADD THIS
   dob: z.string().nullable().optional(),
   currentAddress: z.string().nullable().optional(),
   permanentAddress: z.string().nullable().optional(),
@@ -48,7 +48,8 @@ const employeeSchema = z.object({
   bankAccountNumber: z.string().nullable().optional(),
   ifscCode: z.string().nullable().optional(),
 
-  hourlyRate: z.number({ invalid_type_error: "Hourly rate required" }).positive("Hourly rate must be > 0"),
+ 
+  hourlyRate: z.number().positive(),
 });
 
 type EmployeeFormValues = z.infer<typeof employeeSchema>;
@@ -73,25 +74,32 @@ export default function AddEmployeePage() {
     formState: { errors },
   } = useForm<EmployeeFormValues>({
     resolver: zodResolver(employeeSchema),
-    defaultValues: {
-      name: "",
-      aadhaarNumber: "",
-      mobile: "",
-      departmentId: "",
-      shiftTypeId: null,
-      cycleTimingId: null,
-      pfId: null,
-      pfActive: true,
-      esicId: null,
-      esicActive: true,
-      panNumber: null,
-      dob: null,
-      currentAddress: null,
-      permanentAddress: null,
-      bankAccountNumber: null,
-      ifscCode: null,
-      hourlyRate: 0,
-    },
+   defaultValues: {
+  name: "",
+  aadhaarNumber: "",
+  mobile: "",
+  joinedDate: "", // ✅ ADD
+
+  departmentId: "",
+  shiftTypeId: null,
+  cycleTimingId: null,
+
+  pfId: null,
+  pfActive: true,
+  esicId: null,
+  esicActive: true,
+  panNumber: null,
+
+  dob: null,
+  currentAddress: null,
+  permanentAddress: null,
+
+  bankAccountNumber: null,
+  ifscCode: null,
+
+  hourlyRate: 0,
+},
+
   });
 
   /* ---------------- Fetch master data ---------------- */
@@ -125,6 +133,7 @@ export default function AddEmployeePage() {
 
     const payload = {
       ...data,
+        joinedDate: data.joinedDate, 
       aadhaarNumber: String(data.aadhaarNumber),
       mobile: String(data.mobile),
       hourlyRate: Number(data.hourlyRate),
@@ -289,8 +298,15 @@ export default function AddEmployeePage() {
             <div>
               <Label>Date of Birth</Label>
               <Input type="date" {...register("dob")} />
+              
             </div>
-
+<div>
+  <Label>Joining Date</Label>
+  <Input type="date" {...register("joinedDate")} />
+  {errors.joinedDate && (
+    <p className="text-red-600">{errors.joinedDate.message}</p>
+  )}
+</div>
             {/* Address */}
             <div>
               <Label>Current Address</Label>
