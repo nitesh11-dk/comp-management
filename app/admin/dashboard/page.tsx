@@ -1,6 +1,7 @@
 "use client";
 
 import EmployeeManagement from "@/components/admin/employee-management";
+import AdminAttendanceDashboardV2 from "@/components/admin/NewDash";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import React from "react";
@@ -35,7 +36,8 @@ const Page = () => {
             </Button>
 
             {/* Employee Management */}
-            <EmployeeManagement />
+            {/* <EmployeeManagement /> */}
+            <AdminAttendanceDashboardV2 />
         </div>
     );
 };

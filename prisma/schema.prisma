@@ -83,13 +83,16 @@ model Employee {
   cycleTimingId String?
   cycleTiming   CycleTiming? @relation(fields: [cycleTimingId], references: [id])
 
-  // ADD THESE TWO RELATIONS 👇
-  attendanceWallet     AttendanceWallet?
-  monthlySummaries     MonthlyAttendanceSummary[]
+  attendanceWallet AttendanceWallet?
+  monthlySummaries MonthlyAttendanceSummary[]
+
+  // ✅ NEW FIELD (IMPORTANT)
+  joinedAt DateTime // ← REAL JOIN DATE (business logic)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
 
 //
 // ---------------------- CYCLE TIMING ----------------------
@@ -123,11 +126,18 @@ model MonthlyAttendanceSummary {
 
   daysInCycle   Int
   daysPresent   Int
+  daysAbsent    Int      // ✅ NEW (derived, Excel match)
+
   totalHours    Float
+  overtimeHours Float    @default(0) // ✅ NEW (OT)
+
   hourlyRate    Float
   grossSalary   Float
 
-  deductions    Json?
+  advanceAmount Float    @default(0) // ✅ NEW (Advn.)
+  pfAmount      Float    @default(0) // ✅ NEW (PF)
+
+  deductions    Json?    // shoes, canteen, uniform
   netSalary     Float
 
   generatedAt   DateTime @default(now())
@@ -135,8 +145,9 @@ model MonthlyAttendanceSummary {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([employeeId, cycleStart])
+  @@unique([employeeId, cycleStart])
 }
+
 
 //
 // ---------------------- ATTENDANCE ENTRY ----------------------
