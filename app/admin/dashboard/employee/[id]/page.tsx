@@ -15,6 +15,7 @@ import { calculateWorkLogs, getAttendanceWallet } from "@/actions/attendance";
 
 import EmployeeInfoCard from "@/components/admin/EmployeeInfoCard";
 import WorkLogTable from "@/components/admin/WorkLogTable";
+import { generateFakeAttendance } from "@/actions/fakeattandace";
 
 export default function EmployeeDetailPage() {
   const params = useParams();
@@ -131,6 +132,27 @@ export default function EmployeeDetailPage() {
           <ArrowLeft className="h-4 w-4 mr-2" /> Back
         </Button>
         <h1 className="text-2xl font-bold">{employee.name}</h1>
+        {/* TEMP DEV BUTTON – FAKE ATTENDANCE */}
+<div className="flex gap-3">
+  <Button
+    variant="secondary"
+    onClick={async () => {
+      if (!employee) return;
+
+      setLoadingLogs(true);
+
+      await generateFakeAttendance({
+        employeeId: employee.id,
+        days: 15, // 👈 change days if needed
+      });
+
+      await refreshLogs();
+    }}
+  >
+    Generate Fake Attendance (DEV)
+  </Button>
+</div>
+
       </div>
 
       {/* Employee Info Card */}

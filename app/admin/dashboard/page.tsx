@@ -12,6 +12,14 @@ const Page = () => {
         <div className="p-6 space-y-4">
             {/* Manage Departments Button */}
             <Button
+  onClick={async () => {
+    await createDemoEmployees(15);
+  }}
+>
+  Create Demo Employees
+</Button>
+
+            <Button
                 variant="default"
                 onClick={() => router.push("/admin/dashboard/departments")}
                 className="mb-4 m-2"
