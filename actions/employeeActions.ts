@@ -23,12 +23,12 @@ async function generateUniqueEmpCode(): Promise<string> {
 }
 
 /* ----------------------------------------------------
-   Serialize Employee (FIXED)
+   Serialize Employee
 ---------------------------------------------------- */
 function serializeEmployee(emp: any) {
   return {
     ...emp,
-    joinedDate: emp.joinedDate?.toISOString(), // ✅ IMPORTANT
+    joinedDate: emp.joinedDate?.toISOString() ?? null,
     createdAt: emp.createdAt?.toISOString(),
     updatedAt: emp.updatedAt?.toISOString(),
     dob: emp.dob ? emp.dob.toISOString() : null,
@@ -36,113 +36,40 @@ function serializeEmployee(emp: any) {
 }
 
 /* ----------------------------------------------------
-   CREATE EMPLOYEE (JOINED DATE FIXED)
+   CREATE EMPLOYEE
 ---------------------------------------------------- */
 export async function createEmployee(
   data: any
 ): Promise<ActionResponse<any>> {
   try {
-    /* ---------- NAME ---------- */
     if (!data.name || data.name.trim().length < 3) {
-      return { success: false, message: "⚠️ Name must be at least 3 characters" };
+      return { success: false, message: "Name must be at least 3 characters" };
     }
 
-    /* ---------- JOINED DATE (NEW & REQUIRED) ---------- */
     if (!data.joinedDate) {
-      return {
-        success: false,
-        message: "⚠️ Joining date is required",
-      };
+      return { success: false, message: "Joining date is required" };
     }
 
     const joinedDate = new Date(data.joinedDate);
     if (isNaN(joinedDate.getTime())) {
-      return {
-        success: false,
-        message: "⚠️ Invalid joining date",
-      };
+      return { success: false, message: "Invalid joining date" };
     }
 
-    /* ---------- AADHAAR ---------- */
     if (!/^\d{12}$/.test(String(data.aadhaarNumber))) {
-      return { success: false, message: "⚠️ Aadhaar must be 12 digits" };
+      return { success: false, message: "Aadhaar must be 12 digits" };
     }
 
-    const aadhaarExists = await prisma.employee.findUnique({
-      where: { aadhaarNumber: String(data.aadhaarNumber) },
-    });
-    if (aadhaarExists) {
-      return { success: false, message: "⚠️ Aadhaar already exists" };
-    }
-
-    /* ---------- MOBILE ---------- */
     if (!/^\d{10}$/.test(String(data.mobile))) {
-      return { success: false, message: "⚠️ Mobile must be 10 digits" };
+      return { success: false, message: "Mobile must be 10 digits" };
     }
 
-    /* ---------- PF ---------- */
-    if (data.pfId) {
-      const pfExists = await prisma.employee.findUnique({
-        where: { pfId: data.pfId },
-      });
-      if (pfExists) {
-        return { success: false, message: "⚠️ PF ID already exists" };
-      }
-    }
-
-    /* ---------- ESIC ---------- */
-    if (data.esicId) {
-      const esicExists = await prisma.employee.findUnique({
-        where: { esicId: data.esicId },
-      });
-      if (esicExists) {
-        return { success: false, message: "⚠️ ESIC ID already exists" };
-      }
-    }
-
-    /* ---------- PAN ---------- */
-    if (data.panNumber) {
-      const panExists = await prisma.employee.findUnique({
-        where: { panNumber: data.panNumber },
-      });
-      if (panExists) {
-        return { success: false, message: "⚠️ PAN already exists" };
-      }
-    }
-
-    /* ---------- DEPARTMENT ---------- */
-    const department = await prisma.department.findUnique({
-      where: { id: data.departmentId },
-    });
-    if (!department) {
-      return { success: false, message: "⚠️ Invalid department" };
-    }
-
-    /* ---------- CYCLE ---------- */
-    if (data.cycleTimingId) {
-      const cycle = await prisma.cycleTiming.findUnique({
-        where: { id: data.cycleTimingId },
-      });
-      if (!cycle) {
-        return { success: false, message: "⚠️ Invalid cycle timing" };
-      }
-    }
-
-    /* ---------- HOURLY RATE ---------- */
-    if (!data.hourlyRate || Number(data.hourlyRate) <= 0) {
-      return { success: false, message: "⚠️ Hourly rate must be > 0" };
-    }
-
-    /* ---------- EMP CODE ---------- */
     const empCode = await generateUniqueEmpCode();
 
-    /* ---------- CREATE EMPLOYEE ---------- */
     const employee = await prisma.employee.create({
       data: {
         empCode,
         name: data.name,
-
-        joinedDate, // ✅ USED EVERYWHERE NOW
+        joinedDate,
 
         aadhaarNumber: String(data.aadhaarNumber),
         mobile: String(data.mobile),
@@ -178,32 +105,61 @@ export async function createEmployee(
 
     return {
       success: true,
-      message: "🎉 Employee created successfully",
+      message: "Employee created successfully",
       data: serializeEmployee(employee),
     };
   } catch (error: any) {
-    console.error("❌ Create Employee Error:", error);
-    return { success: false, message: error.message || "Failed to create employee" };
+    console.error(error);
+    return { success: false, message: error.message };
   }
 }
 
 /* ----------------------------------------------------
-   UPDATE EMPLOYEE (JOINED DATE SAFE)
+   GET EMPLOYEES ✅ (THIS FIXES YOUR ERROR)
+---------------------------------------------------- */
+export async function getEmployees(): Promise<ActionResponse<any[]>> {
+  try {
+    const employees = await prisma.employee.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+
+    return {
+      success: true,
+      data: employees.map(serializeEmployee),
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.message,
+      data: [],
+    };
+  }
+}
+
+/* ----------------------------------------------------
+   GET SINGLE EMPLOYEE
+---------------------------------------------------- */
+export async function getEmployeeById(id: string): Promise<ActionResponse<any>> {
+  try {
+    const emp = await prisma.employee.findUnique({ where: { id } });
+    if (!emp) return { success: false, message: "Employee not found" };
+
+    return { success: true, data: serializeEmployee(emp) };
+  } catch (error: any) {
+    return { success: false, message: error.message };
+  }
+}
+
+/* ----------------------------------------------------
+   UPDATE EMPLOYEE
 ---------------------------------------------------- */
 export async function updateEmployee(
   id: string,
   updates: any
 ): Promise<ActionResponse<any>> {
   try {
-    if (updates.joinedDate) {
+    if (updates.joinedDate)
       updates.joinedDate = new Date(updates.joinedDate);
-    }
-
-    if (updates.aadhaarNumber)
-      updates.aadhaarNumber = String(updates.aadhaarNumber);
-
-    if (updates.mobile)
-      updates.mobile = String(updates.mobile);
 
     if (updates.dob)
       updates.dob = new Date(updates.dob);
@@ -215,13 +171,22 @@ export async function updateEmployee(
 
     return {
       success: true,
-      message: "Employee updated successfully",
+      message: "Employee updated",
       data: serializeEmployee(employee),
     };
   } catch (error: any) {
-    return {
-      success: false,
-      message: error.message || "Failed to update employee",
-    };
+    return { success: false, message: error.message };
+  }
+}
+
+/* ----------------------------------------------------
+   DELETE EMPLOYEE
+---------------------------------------------------- */
+export async function deleteEmployee(id: string): Promise<ActionResponse> {
+  try {
+    await prisma.employee.delete({ where: { id } });
+    return { success: true, message: "Employee deleted" };
+  } catch (error: any) {
+    return { success: false, message: error.message };
   }
 }
