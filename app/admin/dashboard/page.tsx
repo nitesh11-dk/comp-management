@@ -69,6 +69,12 @@ const Page = () => {
         >
           Manage Shifts
         </Button>
+        <Button
+          variant="outline"
+          onClick={() => router.push("/admin/dashboard/cycle-time")}
+        >
+          Cycle Timing 
+        </Button>
       </div>
 
       {/* ===============================
