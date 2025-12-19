@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ScanResult } from "@/actions/actions";
+import { ScanResult } from "@/actions/attendance";
 import BarcodeScanner from "@/components/BarCode";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,56 +12,86 @@ type Props = {
 };
 
 export default function SupervisorBarcodeScanner({ scanEmployee }: Props) {
-  const [lastScannedEmployee, setLastScannedEmployee] = useState<ScanResult | null>(null);
+  const [lastScannedEmployee, setLastScannedEmployee] =
+    useState<ScanResult | null>(null);
   const [scanTime, setScanTime] = useState<Date | null>(null);
-  const [message, setMessage] = useState("Ready to scan employee barcode...");
-  const [messageType, setMessageType] = useState<"success" | "error" | "info">("info");
+
+  const [messageType, setMessageType] =
+    useState<"success" | "error">("success");
+
+  const [popupMessage, setPopupMessage] = useState<string | null>(null);
+  const [scannedCode, setScannedCode] = useState<string | null>(null);
+
   const [isProcessing, setIsProcessing] = useState(false);
   const [manualInput, setManualInput] = useState("");
   const [showPopup, setShowPopup] = useState(false);
-  const [scannerOpenTriggerCount, setScannerOpenTriggerCount] = useState(0); // repeated trigger
 
+  const [scannerOpenTriggerCount, setScannerOpenTriggerCount] = useState(0);
+
+  /* 🔊 Sound */
   const playSound = (type: "success" | "error") => {
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioContext = new (window.AudioContext ||
+        (window as any).webkitAudioContext)();
       const osc = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
+
       osc.connect(gainNode);
       gainNode.connect(audioContext.destination);
+
       osc.frequency.value = type === "success" ? 800 : 300;
       gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
       osc.type = "sine";
-      osc.start(audioContext.currentTime);
+
+      osc.start();
       osc.stop(audioContext.currentTime + 0.5);
     } catch {
       console.warn("Audio not supported");
     }
   };
 
+  /* 🔥 MAIN SCAN HANDLER (UPDATED LOGIC) */
   const handleScan = async (empCode: string) => {
     if (!empCode.trim() || isProcessing) return;
+
     setIsProcessing(true);
-    try {
-      const result = await scanEmployee(empCode);
-      setLastScannedEmployee(result);
-      const now = new Date();
-      setScanTime(now);
-      setMessage(
-        `✅ Employee ${result.employeeName} (Code: ${result.empCode}) CHECKED ${result.lastScanType?.toUpperCase()} at ${now.toLocaleTimeString()}`
-      );
-      setMessageType("success");
-      playSound("success");
-      setShowPopup(true);
-    } catch (err: any) {
-      console.error(err);
-      setMessage(`❌ ${err.message}`);
+    setScannedCode(empCode);
+
+    const result = await scanEmployee(empCode);
+
+    // ❌ INVALID EMPLOYEE / ERROR CASE
+    if (!result.success) {
+      setLastScannedEmployee(null);
+      setScanTime(null);
+
+      setPopupMessage(result.message || "Invalid Employee Code");
       setMessageType("error");
+
       playSound("error");
       setShowPopup(true);
-    } finally {
+
       setIsProcessing(false);
       setManualInput("");
+      return;
     }
+
+    // ✅ SUCCESS CASE
+    const now = new Date();
+    setLastScannedEmployee(result);
+    setScanTime(now);
+
+    setPopupMessage(
+      `Employee ${result.employeeName} checked ${
+        result.lastScanType === "out" ? "OUT" : "IN"
+      }`
+    );
+
+    setMessageType("success");
+    playSound("success");
+    setShowPopup(true);
+
+    setIsProcessing(false);
+    setManualInput("");
   };
 
   const handleManualSubmit = (e: React.FormEvent) => {
@@ -71,87 +101,113 @@ export default function SupervisorBarcodeScanner({ scanEmployee }: Props) {
 
   const closePopup = () => {
     setShowPopup(false);
+    setPopupMessage(null);
     setLastScannedEmployee(null);
-    // increment trigger counter to reopen scanner every time
-    setScannerOpenTriggerCount(prev => prev + 1);
+    setScanTime(null);
+    setScannedCode(null);
+
+    // 🔁 reopen scanner
+    setScannerOpenTriggerCount((prev) => prev + 1);
   };
 
   return (
     <div className="flex flex-col items-center justify-center space-y-6 px-4 py-4 max-w-lg mx-auto relative">
-      <h2 className="text-2xl sm:text-3xl font-bold text-center">Supervisor Attendance Scanner</h2>
+      <h2 className="text-2xl sm:text-3xl font-bold text-center">
+        Supervisor Attendance Scanner
+      </h2>
 
-      {/* Loader */}
+      {/* ⏳ Loader */}
       {isProcessing && (
         <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-40">
           <div className="w-16 h-16 border-4 border-blue-500 border-dashed rounded-full animate-spin"></div>
         </div>
       )}
 
-      {/* Camera scanner */}
+      {/* 📷 Scanner */}
       <Card className="w-full border p-2 rounded">
         <BarcodeScanner
           onScan={handleScan}
           fps={10}
           qrboxSize={300}
-          style={{ margin: "0 auto", maxWidth: "100%" }}
-          openTriggerCount={scannerOpenTriggerCount} // repeated reopen
+          openTriggerCount={scannerOpenTriggerCount}
         />
       </Card>
 
-      {/* Manual empCode input */}
-      <form onSubmit={handleManualSubmit} className="w-full flex flex-col sm:flex-row gap-2 mt-2">
+      {/* ✍️ Manual Input */}
+      <form
+        onSubmit={handleManualSubmit}
+        className="w-full flex flex-col sm:flex-row gap-2 mt-2"
+      >
         <input
           type="text"
           placeholder="Enter EmpCode manually"
-          className="border rounded px-3 py-2 flex-1 text-center sm:text-left w-full"
+          className="border rounded px-3 py-2 flex-1"
           value={manualInput}
           onChange={(e) => setManualInput(e.target.value.toUpperCase())}
         />
         <button
           type="submit"
-          className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90 w-full sm:w-auto"
+          className="px-4 py-2 bg-primary text-white rounded"
         >
           Submit
         </button>
       </form>
 
-      {/* Popup Overlay */}
-      {showPopup && lastScannedEmployee && (
+      {/* 🚨 POPUP (SAME UI, DIFFERENT MESSAGE) */}
+      {showPopup && popupMessage && (
         <div
           className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4"
-          onClick={closePopup} // click anywhere to close
+          onClick={closePopup}
         >
           <Card
-            className="max-w-md w-full border-2 border-green-200 bg-green-50 cursor-pointer"
+            className="max-w-md w-full border-2 border-slate-300 bg-white cursor-pointer"
             onClick={(e) => e.stopPropagation()}
           >
-            <CardContent>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <div className="p-2 rounded-full bg-green-100">
-                  <User className="h-6 w-6 text-green-600" />
-                </div>
-                <div className="text-center sm:text-left">
-                  <h4 className="font-bold text-lg">{lastScannedEmployee.employeeName}</h4>
-                  <p className="text-sm text-gray-500">EmpCode: {lastScannedEmployee.empCode}</p>
-                  <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 mt-1">
-                    <Badge variant="default">
-                      {lastScannedEmployee.lastScanType === "out" ? "Checked OUT" : "Currently IN"}
-                    </Badge>
-                    {scanTime && (
-                      <div className="flex items-center gap-1 text-gray-600 text-sm">
-                        <Clock className="h-4 w-4" />
-                        {scanTime.toLocaleTimeString()}
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    onClick={closePopup}
-                    className="mt-4 px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
-                  >
-                    OK
-                  </button>
-                </div>
+            <CardContent className="text-center space-y-3">
+              <div className="flex justify-center">
+                <User
+                  className={`h-8 w-8 ${
+                    messageType === "success"
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                />
               </div>
+
+              <h4 className="font-bold text-lg">{popupMessage}</h4>
+
+              {/* 👇 SHOW SCANNED CODE ALWAYS */}
+              {scannedCode && (
+                <p className="text-sm text-gray-600">
+                  Scanned Code:{" "}
+                  <span className="font-semibold">{scannedCode}</span>
+                </p>
+              )}
+
+              {/* ✅ Extra info only for success */}
+              {messageType === "success" && lastScannedEmployee && (
+                <>
+                  <Badge>
+                    {lastScannedEmployee.lastScanType === "out"
+                      ? "Checked OUT"
+                      : "Checked IN"}
+                  </Badge>
+
+                  {scanTime && (
+                    <div className="flex justify-center items-center gap-1 text-sm text-gray-600">
+                      <Clock className="h-4 w-4" />
+                      {scanTime.toLocaleTimeString()}
+                    </div>
+                  )}
+                </>
+              )}
+
+              <button
+                onClick={closePopup}
+                className="mt-4 px-4 py-2 bg-primary text-white rounded"
+              >
+                OK
+              </button>
             </CardContent>
           </Card>
         </div>

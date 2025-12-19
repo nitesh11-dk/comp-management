@@ -3,35 +3,50 @@
 import prisma from "@/lib/prisma";
 import { scanEmployee as scanEmployeeCore } from "@/actions/attendance";
 
-export type ScanResult = {
-    employeeName: string;
-    empCode: string;
-    lastScanType?: "in" | "out";
-};
+export type ScanResult =
+  | {
+      success: true;
+      empCode: string;
+      employeeName: string;
+      lastScanType: "in" | "out";
+    }
+  | {
+      success: false;
+      message: string;
+    };
 
 export async function scanEmployee(empCode: string): Promise<ScanResult> {
-    // 1️⃣ Find employee by empCode (Prisma)
+  try {
+    // 1️⃣ Find employee
     const employee = await prisma.employee.findUnique({
-        where: { empCode },
-        select: { id: true, name: true, empCode: true },
+      where: { empCode },
+      select: { id: true, name: true, empCode: true },
     });
 
+    // ❌ Employee does not exist (BUSINESS ERROR)
     if (!employee) {
-        throw new Error("Employee not found with given EmpCode");
+      return {
+        success: false,
+        message: "Invalid Employee Code",
+      };
     }
 
-    try {
-        // 2️⃣ Perform scan (in/out auto logic)
-        const result = await scanEmployeeCore({ empCode });
+    // 2️⃣ Perform scan (in/out auto logic)
+    const result = await scanEmployeeCore({ empCode });
 
-        return {
-            empCode: employee.empCode,
-            employeeName: employee.name,
-            lastScanType: result.lastScanType,
-        };
-    } catch (err: any) {
-        console.error("❌ Error scanning employee:", err);
-        throw new Error(err.message || "Unknown error occurred while scanning employee");
-    }
+    return {
+      success: true, // ✅ REQUIRED
+      empCode: employee.empCode,
+      employeeName: employee.name,
+      lastScanType: result.lastScanType,
+    };
+  } catch (err: any) {
+    console.error("❌ Error scanning employee:", err);
+
+    // ❌ System / unexpected error (NO throw)
+    return {
+      success: false,
+      message: "Something went wrong while scanning employee",
+    };
+  }
 }
-
