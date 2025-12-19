@@ -58,7 +58,7 @@ const EmployeeDetailsPage = memo(function EmployeeDetailsPage() {
 
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-        <Button variant="outline" onClick={() => router.back()} size="sm" className="self-start">
+        <Button variant="outline" onClick={() => router.push('/admin/dashboard')} size="sm" className="self-start">
           <ArrowLeft className="h-4 w-4 mr-2" /> Back
         </Button>
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-1">
