@@ -149,7 +149,7 @@ export default function EmployeeManagement() {
                   <td className="p-2 border-b">{emp.aadhaarNumber || "-"}</td>
 
                   <td className="p-2 border-b flex flex-wrap gap-2">
-                    {/* 🔥 OFFSCREEN BARCODE (CRITICAL FIX) */}
+
                     <div
                       ref={(el) => (barcodeRefs.current[emp.id] = el)}
                       className="absolute -left-[9999px] top-0 bg-white p-4"
@@ -159,17 +159,6 @@ export default function EmployeeManagement() {
                         renderer="canvas" // 🔥 MUST
                       />
                     </div>
-
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        downloadBarcode(emp.id, emp.empCode)
-                      }
-                    >
-                      <Download className="h-3 w-3 mr-1" />
-                      Barcode
-                    </Button>
 
                     <Button
                       size="sm"

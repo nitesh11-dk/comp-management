@@ -213,13 +213,17 @@ async function calculateOneEmployee({
     canteen: 0,
   };
 
+  // PF Deduction
+  const pfDeduction = employee.pfActive && employee.pfAmountPerDay ? (employee.pfAmountPerDay * daysPresent) : 0;
+
   const netSalary =
     Math.round(
       (totalHours + overtimeHours) * employee.hourlyRate * 100
     ) /
       100 -
     advanceAmount -
-    sumDeductions(deductions);
+    sumDeductions(deductions) -
+    pfDeduction;
 
   return prisma.monthlyAttendanceSummary.upsert({
     where: {

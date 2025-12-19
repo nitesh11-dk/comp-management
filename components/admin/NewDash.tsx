@@ -64,7 +64,7 @@ export default function AdminAttendanceDashboardV2() {
     (async () => {
       const res = await getCycleTimings();
       if (res.success) {
-        setCycles(res.data);
+        setCycles(res.data || []);
         setDraftCycleId("all");
       }
     })();
@@ -241,37 +241,41 @@ export default function AdminAttendanceDashboardV2() {
           ))}
         </select>
 
-        <Button disabled={isBusy} onClick={onSearch}>🔍 Search</Button>
-        <Button variant="destructive" disabled={isBusy || !appliedFilters} onClick={recalcAll}>
-          {recalcLoading === "ALL" ? "Calculating..." : "🔄 Recalculate All"}
+        <Button disabled={isBusy} onClick={onSearch} className="px-4 py-2">Search</Button>
+        <Button variant="outline" disabled={isBusy || !appliedFilters} onClick={recalcAll} className="px-4 py-2">
+          {recalcLoading === "ALL" ? "Calculating..." : "Recalculate All"}
         </Button>
       </div>
 
       {/* TABLE */}
-      <div className="overflow-auto border rounded">
-        <table className="min-w-[1450px] w-full text-sm">
-          <thead className="bg-gray-100">
+      <div className="overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
+        <table className="min-w-[1600px] w-full text-sm">
+          <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th>Name</th>
-              <th>PF ID</th>
-              <th>Cycle</th>
-              <th>Present</th>
-              <th>Absent</th>
-              <th>Total Hrs</th>
-              <th>OT</th>
-              <th>Rate</th>
-              <th>Advance</th>
-              <th>Deductions</th>
-              <th>Net Salary</th>
-              <th>Action</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Name</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">PF ID</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">PF/Day</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Cycle</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Present</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Absent</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Total Hrs</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">OT</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Rate</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Advance</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Deductions</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Net Salary</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</th>
             </tr>
           </thead>
 
-          <tbody>
+          <tbody className="bg-white divide-y divide-gray-200">
             {loading && (
               <tr>
-                <td colSpan={12} className="text-center p-6">
-                  Loading data...
+                <td colSpan={13} className="px-4 py-8 text-center text-gray-500">
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mr-2"></div>
+                    Loading data...
+                  </div>
                 </td>
               </tr>
             )}
@@ -281,14 +285,17 @@ export default function AdminAttendanceDashboardV2() {
                 const cycle = getCycleById(employee.cycleTimingId);
 
                 return (
-                  <tr key={employee.id}>
-                    <td>{employee.name}</td>
-                    <td>{employee.pfId || "-"}</td>
+                  <tr key={employee.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{employee.name}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{employee.pfId || "-"}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                      {employee.pfActive && employee.pfAmountPerDay ? `₹${employee.pfAmountPerDay}` : "-"}
+                    </td>
 
-                    <td className="text-xs">
-                      {cycle?.name}
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      <div className="font-medium">{cycle?.name}</div>
                       {summary && (
-                        <div className="text-gray-500">
+                        <div className="text-xs text-gray-500 mt-1">
                           {format(new Date(summary.cycleStart), "dd MMM yyyy")}
                           {" → "}
                           {format(new Date(summary.cycleEnd), "dd MMM yyyy")}
@@ -298,34 +305,40 @@ export default function AdminAttendanceDashboardV2() {
 
                     {summary ? (
                       <>
-                        <td>{summary.daysPresent}</td>
-                        <td>{summary.daysAbsent}</td>
-                        <td>{summary.totalHours}</td>
-                        <td>{summary.overtimeHours}</td>
-                        <td>₹{summary.hourlyRate}</td>
-                        <td>₹{summary.advanceAmount}</td>
-                        <td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{summary.daysPresent}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{summary.daysAbsent}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{summary.totalHours}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{summary.overtimeHours}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">₹{summary.hourlyRate}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">₹{summary.advanceAmount}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                           ₹
                           {Object.values(summary.deductions || {}).reduce(
                             (a: number, b: any) => a + Number(b || 0),
                             0
                           )}
                         </td>
-                        <td className="font-semibold">₹{summary.netSalary}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900">₹{summary.netSalary}</td>
                       </>
                     ) : (
-                      <td colSpan={8} className="text-center text-gray-400">
+                      <td colSpan={9} className="px-4 py-3 text-center text-sm text-gray-400">
                         Not calculated
                       </td>
                     )}
 
-                    <td>
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <Button
                         size="sm"
+                        variant="outline"
                         disabled={isBusy}
                         onClick={() => recalcOne(employee)}
+                        className="px-3 py-1"
                       >
-                        🔄
+                        {recalcLoading === employee.id ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                        ) : (
+                          "Recalc"
+                        )}
                       </Button>
                     </td>
                   </tr>

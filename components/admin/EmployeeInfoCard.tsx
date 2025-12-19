@@ -185,6 +185,9 @@ const EmployeeInfoCard = memo(function EmployeeInfoCard({
               </span>
             </p>
             <p>
+              <strong>PF Amount Per Day:</strong> ₹{employee.pfAmountPerDay || 0}
+            </p>
+            <p>
               <strong>ESIC ID:</strong> {employee.esicId || "N/A"}{" "}
               <span
                 className={`text-xs ml-2 ${
