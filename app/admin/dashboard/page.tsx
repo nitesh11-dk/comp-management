@@ -27,7 +27,7 @@ const Page = () => {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className=" md:p-6 space-y-6">
       {/* ===============================
          TOP ACTION BAR
       =============================== */}

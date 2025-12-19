@@ -348,7 +348,7 @@ export default function CombinedEmployeeDashboard() {
   }
 
   return (
-    <div className="space-y-6 p-4">
+    <div className="space-y-6 p-2 md:p-4">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Employee & Attendance Dashboard</h2>
         <Badge variant="outline" className="text-sm">
