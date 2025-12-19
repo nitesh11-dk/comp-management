@@ -6,10 +6,9 @@ import prisma from "@/lib/prisma";
 export async function registerUser(formData: {
   username: string;
   password: string;
-  role: "admin" | "supervisor";
-  departmentId?: string;
+  departmentId: string;
 }) {
-  let { username, password, role, departmentId } = formData;
+  let { username, password, departmentId } = formData;
 
   // Normalize username
   username = username.trim().toLowerCase();
@@ -36,24 +35,24 @@ export async function registerUser(formData: {
   // Hash password
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  // Supervisor must have departmentId
-  if (role === "supervisor" && !departmentId) {
-    return { success: false, message: "Supervisor must have a department" };
-  }
-
-  // Create user
+  // Create ONLY supervisor
   const user = await prisma.user.create({
     data: {
       username,
       password: hashedPassword,
-      role,
-      departmentId: role === "supervisor" ? departmentId : null,
+      role: "supervisor", // 🔒 hard-coded
+      departmentId,
     },
   });
 
   return {
     success: true,
-    message: "Registered successfully",
-    user,
+    message: "Supervisor registered successfully",
+    user: {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      departmentId: user.departmentId,
+    },
   };
 }

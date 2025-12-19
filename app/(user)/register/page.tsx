@@ -6,21 +6,21 @@ import { toast } from "sonner";
 import UserForm from "@/components/UserForm";
 import { registerUser } from "@/actions/register";
 import { getDepartments } from "@/actions/department";
-import { IDepartment } from "@/lib/models/Department"; // make sure this exists
+import { IDepartment } from "@/lib/models/Department";
 
 export default function RegisterPage() {
   const router = useRouter();
   const [departments, setDepartments] = useState<IDepartment[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // 🔒 No role field at all
   const initialData = {
     username: "",
     password: "",
-    role: "supervisor", // default role
     departmentId: "",
   };
 
-  // fetch departments on mount
+  // Fetch departments on mount
   useEffect(() => {
     const fetchDepartments = async () => {
       try {
@@ -28,11 +28,11 @@ export default function RegisterPage() {
         if (res.success) {
           setDepartments(res.data);
         } else {
-          toast.error(res.message || "⚠️ Failed to load departments");
+          toast.error(res.message || "Failed to load departments");
         }
       } catch (err) {
         console.error("Error fetching departments:", err);
-        toast.error("🚨 Error fetching departments");
+        toast.error("Something went wrong while loading departments");
       } finally {
         setLoading(false);
       }
@@ -41,21 +41,23 @@ export default function RegisterPage() {
     fetchDepartments();
   }, []);
 
-  const handleRegister = async (formData: any) => {
+  const handleRegister = async (formData: {
+    username: string;
+    password: string;
+    departmentId: string;
+  }) => {
     try {
       const res = await registerUser(formData);
 
       if (res.success) {
-        toast.success("🎉 Registered successfully! Redirecting...", {
-          autoClose: 2000,
-        });
+        toast.success("Supervisor registered successfully");
         router.push("/login");
       } else {
-        toast.error(res.message || "❌ Registration failed");
+        toast.error(res.message || "Registration failed");
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Registration error:", err);
-      toast.error("🚨 Something went wrong. Please try again.");
+      toast.error("Something went wrong. Please try again.");
     }
   };
 
@@ -71,13 +73,13 @@ export default function RegisterPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4">
       <div className="w-full max-w-md bg-white shadow-lg rounded-2xl p-6">
         <h2 className="text-2xl font-semibold text-gray-800 text-center mb-6">
-          Register New User
+          Register Supervisor
         </h2>
 
         <UserForm
           initialData={initialData}
           onSubmit={handleRegister}
-          buttonText="Register"
+          buttonText="Register Supervisor"
           departments={departments}
         />
 
