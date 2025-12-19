@@ -138,6 +138,7 @@ const EmployeeInfoCard = memo(function EmployeeInfoCard({
             <p><strong>Aadhaar:</strong> {employee.aadhaarNumber}</p>
             <p><strong>PAN:</strong> {employee.panNumber || "N/A"}</p>
             <p><strong>Date of Birth:</strong> {formatDate(employee.dob)}</p>
+            <p><strong>Date of Birth:</strong> {formatDate(employee.joinedAt)}</p>
           </CardContent>
         </Card>
 

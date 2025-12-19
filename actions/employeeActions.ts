@@ -200,7 +200,11 @@ export async function getEmployeeById(
   id: string
 ): Promise<ActionResponse<any>> {
   try {
-    const emp = await prisma.employee.findUnique({ where: { id } });
+    const emp = await prisma.employee.findUnique({ where: { id },include: {
+    department: true,
+    shiftType: true,
+    cycleTiming: true,
+  }, });
     if (!emp) return { success: false, message: "Employee not found" };
 
     return { success: true, data: serializeEmployee(emp) };
