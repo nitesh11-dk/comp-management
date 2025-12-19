@@ -375,9 +375,9 @@ export default function CombinedEmployeeDashboard() {
                 </SelectTrigger>
                 <SelectContent>
                   {Array.from({ length: 12 }).map((_, i) => (
-                    <option key={i} value={i + 1}>
-                      {format(new Date(2024, i, 1), "MMMM")}
-                    </option>
+                    <SelectItem key={i} value={(i + 1).toString()}>
+                      {format(new Date(2020, i, 1), "MMMM")}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -390,8 +390,10 @@ export default function CombinedEmployeeDashboard() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {[draftYear - 1, draftYear, draftYear + 1].map((y) => (
-                    <option key={y}>{y}</option>
+                  {Array.from({ length: now.getFullYear() - 2020 + 2 }, (_, i) => 2020 + i).map((y) => (
+                    <SelectItem key={y} value={y.toString()}>
+                      {y}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>

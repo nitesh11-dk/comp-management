@@ -13,7 +13,7 @@ import { getEmployeeById } from "@/actions/employeeActions";
 import { getDepartmentById } from "@/actions/department";
 import { getShiftTypeById } from "@/actions/shiftType";
 import { getCycleTimingById } from "@/actions/cycleTimings";
-import { calculateMonthlyForEmployee } from "@/actions/monthlyAttendance";
+import { calculateMonthlyForEmployee, getMonthlySummaries } from "@/actions/monthlyAttendance";
 
 import EmployeeInfoCard from "@/components/admin/EmployeeInfoCard";
 
