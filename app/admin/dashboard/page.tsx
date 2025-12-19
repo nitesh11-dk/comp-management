@@ -1,18 +1,14 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 
-import EmployeeManagement from "@/components/admin/employee-management";
-import AdminAttendanceDashboardV2 from "@/components/admin/NewDash";
+import CombinedEmployeeDashboard from "@/components/admin/employee-management";
 import { createFakeEmployees } from "@/actions/createFakeEmployee";
 
 const Page = () => {
   const router = useRouter();
-
-  // 🔑 VIEW STATE
-  const [view, setView] = useState<"attendance" | "employees">("attendance");
 
   // 🔄 SERVER ACTION STATE
   const [isPending, startTransition] = useTransition();
@@ -36,18 +32,6 @@ const Page = () => {
          TOP ACTION BAR
       =============================== */}
       <div className="flex flex-wrap gap-3 items-center">
-        {/* VIEW SELECT */}
-        <select
-          value={view}
-          onChange={(e) =>
-            setView(e.target.value as "attendance" | "employees")
-          }
-          className="border px-3 py-2 rounded"
-        >
-          <option value="attendance">Attendance Dashboard</option>
-          <option value="employees">Employee Management</option>
-        </select>
-
         {/* QUICK NAV BUTTONS */}
         <Button
           variant="outline"
@@ -73,17 +57,14 @@ const Page = () => {
           variant="outline"
           onClick={() => router.push("/admin/dashboard/cycle-time")}
         >
-          Cycle Timing 
+          Cycle Timing
         </Button>
       </div>
 
       {/* ===============================
-         MAIN CONTENT
+         MAIN CONTENT - COMBINED DASHBOARD
       =============================== */}
-      <div className="border rounded p-4 bg-white">
-        {view === "attendance" && <AdminAttendanceDashboardV2 />}
-        {view === "employees" && <EmployeeManagement />}
-      </div>
+      <CombinedEmployeeDashboard />
     </div>
   );
 };
