@@ -111,7 +111,7 @@ export default function SupervisorBarcodeScanner({ scanEmployee }: Props) {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center space-y-6 px-4 py-4 max-w-lg mx-auto relative">
+    <div className="flex flex-col items-center justify-center space-y-6  max-w-lg mx-auto relative">
       <h2 className="text-2xl sm:text-3xl font-bold text-center">
         Supervisor Attendance Scanner
       </h2>

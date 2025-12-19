@@ -45,7 +45,7 @@ export default function SupervisorHistoryPage() {
         );
 
     return (
-        <div className="space-y-4 px-2 sm:px-4">
+        <div className="space-y-4 p-1 sm:px-4">
             {/* Back Button */}
             <div className="flex justify-start">
                 <Button
