@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { Clock, LogOut } from "lucide-react"; // use LogOut icon
 import { useEffect, useState } from "react";
 import { getCurrentUserDepartment } from "@/actions/department";

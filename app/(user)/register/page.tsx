@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import UserForm from "@/components/UserForm";
 import { registerUser } from "@/actions/register";
 import { getDepartments } from "@/actions/department";
