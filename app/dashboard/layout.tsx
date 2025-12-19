@@ -21,7 +21,7 @@ export default function SupervisorLayout({ children }: SupervisorLayoutProps) {
             router.push("/login");
         } catch (err) {
             console.error("Logout error:", err);
-            toast.error("❌ Failed to logout");
+            toast.error(" Failed to logout");
         }
     };
 

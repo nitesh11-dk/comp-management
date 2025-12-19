@@ -5,37 +5,57 @@ import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
 
-export async function loginUser(formData: FormData) {
-  const username = formData.get("username") as string;
-  const password = formData.get("password") as string;
+type LoginResponse =
+  | { success: false; message: string }
+  | {
+      success: true;
+      message: string;
+      user: {
+        id: string;
+        username: string;
+        role: "admin" | "supervisor" | "user";
+        departmentId: string | null;
+      };
+    };
 
-  // 🔍 find user by username
+export async function loginUser(
+  formData: FormData
+): Promise<LoginResponse> {
+  const username = formData.get("username") as string | null;
+  const password = formData.get("password") as string | null;
+
+  if (!username || !password) {
+    return { success: false, message: "Username and password are required" };
+  }
+
+  // 🔍 Find user
   const user = await prisma.user.findUnique({
     where: { username },
   });
 
   if (!user) {
-    return { success: false, message: "User not found" };
+    return { success: false, message: "Invalid credentials" };
   }
 
-  // 🔐 compare password
+  // 🔐 Compare password
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
     return { success: false, message: "Invalid credentials" };
   }
 
-  // 🎫 JWT payload
+  // 🎫 Create JWT (ONLY trusted data)
   const token = jwt.sign(
     {
       id: user.id,
       role: user.role,
-      departmentId: user.role === "supervisor" ? user.departmentId : null,
+      departmentId:
+        user.role === "supervisor" ? user.departmentId : null,
     },
     process.env.JWT_SECRET!,
     { expiresIn: "7d" }
   );
 
-  // 🍪 set cookie
+  // 🍪 Store JWT in HTTP-only cookie
   cookies().set("token", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -44,6 +64,7 @@ export async function loginUser(formData: FormData) {
     maxAge: 60 * 60 * 24 * 7, // 7 days
   });
 
+  // ✅ Return ONLY non-sensitive user data
   return {
     success: true,
     message: "Login successful",
