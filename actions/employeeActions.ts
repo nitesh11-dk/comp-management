@@ -129,7 +129,45 @@ export async function createEmployee(
     };
   } catch (error: any) {
     console.error("❌ Create Employee Error:", error);
-    return { success: false, message: error.message };
+
+    // Handle unique constraint violations
+    if (error.code === "P2002") {
+      const field = error.meta?.target?.[0];
+      switch (field) {
+        case "aadhaarNumber":
+          return {
+            success: false,
+            message: "Aadhaar number already exists. Please use a different Aadhaar number.",
+          };
+        case "pfId":
+          return {
+            success: false,
+            message: "PF ID already exists. Please use a different PF ID.",
+          };
+        case "esicId":
+          return {
+            success: false,
+            message: "ESIC ID already exists. Please use a different ESIC ID.",
+          };
+        case "panNumber":
+          return {
+            success: false,
+            message: "PAN number already exists. Please use a different PAN number.",
+          };
+        case "empCode":
+          return {
+            success: false,
+            message: "Employee code generation failed. Please try again.",
+          };
+        default:
+          return {
+            success: false,
+            message: "A unique constraint was violated. Please check your input.",
+          };
+      }
+    }
+
+    return { success: false, message: error.message || "Failed to create employee" };
   }
 }
 

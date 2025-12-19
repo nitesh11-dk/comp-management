@@ -30,15 +30,17 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Download } from "lucide-react";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Download } from "lucide-react";
 
 /* ---------------- ZOD SCHEMA ---------------- */
 const employeeSchema = z.object({
-  name: z.string().min(3),
-  aadhaarNumber: z.string().regex(/^\d{12}$/),
-  mobile: z.string().regex(/^\d{10}$/),
+  name: z.string().min(3, "Name must be at least 3 characters"),
+  aadhaarNumber: z.string().regex(/^\d{12}$/, "Aadhaar must be exactly 12 digits"),
+  mobile: z.string().regex(/^\d{10}$/, "Mobile must be exactly 10 digits"),
 
-  departmentId: z.string().min(1),
+  departmentId: z.string().min(1, "Department is required"),
 
   shiftTypeId: z.string().nullable(),
   cycleTimingId: z.string().nullable(),
@@ -46,29 +48,30 @@ const employeeSchema = z.object({
   pfId: z.string().nullable(),
   pfActive: z.boolean().optional(),
 
-  pfAmountPerDay: z.number().default(0),
+  pfAmountPerDay: z.number().min(0, "PF amount cannot be negative"),
 
   esicId: z.string().nullable(),
   esicActive: z.boolean().optional(),
 
-  panNumber: z.string().nullable(),
+  panNumber: z.string().regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "PAN must be in format AAAAA9999A").nullable(),
 
-  joinedAt: z.string().min(1),
+  joinedAt: z.string().min(1, "Joining date is required"),
 
   dob: z.string().nullable(),
   currentAddress: z.string().nullable(),
   permanentAddress: z.string().nullable(),
 
   bankAccountNumber: z.string().nullable(),
-  ifscCode: z.string().nullable(),
+  ifscCode: z.string().regex(/^[A-Z0-9]{11}$/, "IFSC must be exactly 11 alphanumeric characters").nullable(),
 
-  hourlyRate: z.number().positive(),
+  hourlyRate: z.number().positive("Hourly rate must be positive"),
 });
 
 type EmployeeFormValues = z.infer<typeof employeeSchema>;
 
 export default function AddEmployeePage() {
   const barcodeRef = useRef<HTMLDivElement | null>(null);
+  const router = useRouter();
 
   const [departments, setDepartments] = useState<any[]>([]);
   const [shiftTypes, setShiftTypes] = useState<any[]>([]);
@@ -162,11 +165,13 @@ export default function AddEmployeePage() {
       setGeneratedEmployee(res.data);
       setMessage("Employee created successfully");
       setMessageType("success");
+      toast.success("Employee created successfully");
       reset();
       setTimeout(() => downloadBarcode(res.data.empCode), 300);
     } else {
       setMessage(res.message);
       setMessageType("error");
+      toast.error(res.message);
     }
 
     setIsSubmitting(false);
@@ -175,15 +180,28 @@ export default function AddEmployeePage() {
   /* ---------------- LOADER ---------------- */
   if (loadingMaster) {
     return (
-      <div className="h-[60vh] flex items-center justify-center text-gray-500">
-        Loading departments, shift types & cycle timings...
+      <div className="h-[60vh] flex flex-col items-center justify-center space-y-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <p className="text-gray-500 text-center">
+          Loading departments, shift types & cycle timings...
+        </p>
       </div>
     );
   }
 
   /* ---------------- UI ---------------- */
   return (
-    <div className="p-4 max-w-5xl mx-auto space-y-6">
+    <div className="p-2 md:p-4 max-w-5xl mx-auto space-y-6">
+      {/* BACK BUTTON */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => router.push("/admin/dashboard")}
+        className="flex items-center gap-2"
+      >
+        <ArrowLeft className="h-4 w-4" /> Back to Dashboard
+      </Button>
+
       <h1 className="text-2xl font-bold">Add Employee</h1>
 
       <Card>
@@ -192,89 +210,108 @@ export default function AddEmployeePage() {
         </CardHeader>
 
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
 
-            {/* BASIC */}
-            <InputBlock label="Name" error={errors.name?.message}>
-              <Input {...register("name")} />
-            </InputBlock>
+            {/* BASIC INFO */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <InputBlock label="Name *" error={errors.name?.message}>
+                <Input {...register("name")} placeholder="Full name" />
+              </InputBlock>
 
-            <InputBlock label="Aadhaar" error={errors.aadhaarNumber?.message}>
-              <Input {...register("aadhaarNumber")} maxLength={12} />
-            </InputBlock>
+              <InputBlock label="Aadhaar Number *" error={errors.aadhaarNumber?.message}>
+                <Input {...register("aadhaarNumber")} maxLength={12} placeholder="12-digit number" />
+              </InputBlock>
 
-            <InputBlock label="Mobile" error={errors.mobile?.message}>
-              <Input {...register("mobile")} maxLength={10} />
-            </InputBlock>
+              <InputBlock label="Mobile Number *" error={errors.mobile?.message}>
+                <Input {...register("mobile")} maxLength={10} placeholder="10-digit number" />
+              </InputBlock>
 
-            <InputBlock label="Joining Date" error={errors.joinedAt?.message}>
-              <Input type="date" {...register("joinedAt")} />
-            </InputBlock>
-
-            {/* DEPARTMENT */}
-            <SelectBlock
-              label="Department"
-              name="departmentId"
-              control={control}
-              items={departments}
-            />
-
-            <SelectBlock
-              label="Shift Type"
-              name="shiftTypeId"
-              control={control}
-              items={shiftTypes}
-              nullable
-              render={(s) => `${s.name} (${s.totalHours} hrs)`}
-            />
-
-            <SelectBlock
-              label="Cycle Timing"
-              name="cycleTimingId"
-              control={control}
-              items={cycleTimings}
-              nullable
-              render={(c) => `${c.name} (Start ${c.startDay})`}
-            />
-
-            {/* PAY */}
-            <InputBlock label="Hourly Rate">
-              <Input type="number" {...register("hourlyRate", { valueAsNumber: true })} />
-            </InputBlock>
-
-            <InputBlock label="PF Amount Per Day">
-              <Input type="number" step="0.01" {...register("pfAmountPerDay", { valueAsNumber: true })} />
-            </InputBlock>
-
-{/* DOB */}
-<div>
-  <Label>Date of Birth</Label>
-  <Input type="date" {...register("dob")} />
-  {errors.dob && (
-    <p className="text-red-600">{errors.dob.message}</p>
-  )}
-</div>
-
-            {/* IDS */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-              <Input {...register("pfId")} placeholder="PF ID" />
-              <Input {...register("esicId")} placeholder="ESIC ID" />
-              <Input {...register("panNumber")} placeholder="PAN" />
+              <InputBlock label="Joining Date *" error={errors.joinedAt?.message}>
+                <Input type="date" {...register("joinedAt")} />
+              </InputBlock>
             </div>
 
-            {/* ADDRESS */}
-            <Input {...register("currentAddress")} placeholder="Current Address" />
-            <Input {...register("permanentAddress")} placeholder="Permanent Address" />
+            {/* DEPARTMENT & ASSIGNMENTS */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <SelectBlock
+                label="Department *"
+                name="departmentId"
+                control={control}
+                items={departments}
+                error={errors.departmentId?.message}
+              />
 
-            {/* BANK */}
-            <Input {...register("bankAccountNumber")} placeholder="Bank Account" />
-            <Input {...register("ifscCode")} placeholder="IFSC Code" />
+              <SelectBlock
+                label="Shift Type"
+                name="shiftTypeId"
+                control={control}
+                items={shiftTypes}
+                nullable
+                render={(s) => `${s.name} (${s.totalHours} hrs)`}
+              />
 
-            {message && (
-              <Alert variant={messageType === "error" ? "destructive" : "default"}>
-                <AlertDescription>{message}</AlertDescription>
-              </Alert>
-            )}
+              <SelectBlock
+                label="Cycle Timing"
+                name="cycleTimingId"
+                control={control}
+                items={cycleTimings}
+                nullable
+                render={(c) => `${c.name} (Start ${c.startDay})`}
+              />
+            </div>
+
+            {/* PAY INFO */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <InputBlock label="Hourly Rate *" error={errors.hourlyRate?.message}>
+                <Input type="number" step="0.01" {...register("hourlyRate", { valueAsNumber: true })} placeholder="Rate per hour" />
+              </InputBlock>
+
+              <InputBlock label="PF Amount Per Day" error={errors.pfAmountPerDay?.message}>
+                <Input type="number" step="0.01" {...register("pfAmountPerDay", { valueAsNumber: true })} placeholder="0.00" />
+              </InputBlock>
+            </div>
+
+            {/* PERSONAL INFO */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <InputBlock label="Date of Birth" error={errors.dob?.message}>
+                <Input type="date" {...register("dob")} />
+              </InputBlock>
+
+              <div className="space-y-2">
+                <Label>Current Address</Label>
+                <Input {...register("currentAddress")} placeholder="Current residential address" />
+              </div>
+            </div>
+
+            <InputBlock label="Permanent Address">
+              <Input {...register("permanentAddress")} placeholder="Permanent address" />
+            </InputBlock>
+
+            {/* IDENTIFICATION */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <InputBlock label="PF ID">
+                <Input {...register("pfId")} placeholder="Provident Fund ID" />
+              </InputBlock>
+
+              <InputBlock label="ESIC ID">
+                <Input {...register("esicId")} placeholder="Employee State Insurance ID" />
+              </InputBlock>
+
+              <InputBlock label="PAN Number" error={errors.panNumber?.message}>
+                <Input {...register("panNumber")} placeholder="AAAAA9999A" maxLength={10} />
+              </InputBlock>
+            </div>
+
+            {/* BANK DETAILS */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <InputBlock label="Bank Account Number">
+                <Input {...register("bankAccountNumber")} placeholder="Account number" />
+              </InputBlock>
+
+              <InputBlock label="IFSC Code" error={errors.ifscCode?.message}>
+                <Input {...register("ifscCode")} maxLength={11} placeholder="11-character code (e.g., ABCD0123456)" />
+              </InputBlock>
+            </div>
 
             <Button type="submit" disabled={isSubmitting} className="w-full">
               {isSubmitting ? "Saving..." : "Create Employee"}
@@ -285,15 +322,21 @@ export default function AddEmployeePage() {
 
       {generatedEmployee && (
         <Card className="bg-green-50 border-green-500 border">
-          <CardContent className="space-y-2">
-            <p><b>Name:</b> {generatedEmployee.name}</p>
-            <p><b>Code:</b> {generatedEmployee.empCode}</p>
-            <div ref={barcodeRef} className="inline-block bg-white p-4">
-              <Barcode value={generatedEmployee.empCode} />
+          <CardContent className="p-4 md:p-6">
+            <div className="flex flex-col md:flex-row md:items-center gap-4">
+              <div className="flex-1 space-y-2">
+                <p className="text-lg"><b>Name:</b> {generatedEmployee.name}</p>
+                <p className="text-lg"><b>Employee Code:</b> {generatedEmployee.empCode}</p>
+              </div>
+              <div className="flex flex-col items-center gap-2">
+                <div ref={barcodeRef} className="inline-block bg-white p-4 rounded border">
+                  <Barcode value={generatedEmployee.empCode} />
+                </div>
+                <Button onClick={() => downloadBarcode(generatedEmployee.empCode)} size="sm">
+                  <Download className="h-4 w-4 mr-2" /> Download Barcode
+                </Button>
+              </div>
             </div>
-            <Button onClick={() => downloadBarcode(generatedEmployee.empCode)}>
-              <Download /> Download Barcode
-            </Button>
           </CardContent>
         </Card>
       )}
@@ -319,6 +362,7 @@ function SelectBlock({
   items,
   nullable,
   render = (i: any) => i.name,
+  error,
 }: any) {
   return (
     <div>
@@ -332,7 +376,7 @@ function SelectBlock({
             onValueChange={(v) => field.onChange(v === "null" ? null : v)}
           >
             <SelectTrigger>
-              <SelectValue placeholder={`Select ${label}`} />
+              <SelectValue placeholder={`Select ${label.replace(' *', '')}`} />
             </SelectTrigger>
             <SelectContent>
               {nullable && <SelectItem value="null">None</SelectItem>}
@@ -345,6 +389,7 @@ function SelectBlock({
           </Select>
         )}
       />
+      {error && <p className="text-red-600 text-sm mt-1">{error}</p>}
     </div>
   );
 }
