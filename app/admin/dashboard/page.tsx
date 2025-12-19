@@ -40,12 +40,12 @@ const Page = () => {
           Manage Departments
         </Button>
 
-        <Button
+        {/* <Button
           disabled={isPending}
           onClick={handleCreateFakeEmployees}
         >
           {isPending ? "Creating..." : "Create Fake Employees"}
-        </Button>
+        </Button> */}
 
         <Button
           variant="outline"

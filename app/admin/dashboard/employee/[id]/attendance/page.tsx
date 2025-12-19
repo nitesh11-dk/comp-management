@@ -139,7 +139,7 @@ const EmployeeAttendancePage = memo(function EmployeeAttendancePage() {
             View Profile
           </Button>
           {/* TEMP DEV BUTTON – FAKE ATTENDANCE */}
-          <Button
+          {/* <Button
             variant="secondary"
             size="sm"
             onClick={async () => {
@@ -157,7 +157,7 @@ const EmployeeAttendancePage = memo(function EmployeeAttendancePage() {
             className="self-start"
           >
             Generate Fake Attendance (DEV)
-          </Button>
+          </Button> */}
         </div>
       </div>
 
