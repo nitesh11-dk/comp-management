@@ -416,10 +416,20 @@ export default function CombinedEmployeeDashboard() {
               </Select>
             </div>
 
-            <div className="flex items-end">
-              <Button disabled={isBusy} onClick={onSearch} className="w-full">
-                <Calculator className="h-4 w-4 mr-2" />
-                Load Data
+            
+             <div className="flex items-end">
+              <Button variant="outline" disabled={isBusy || !appliedFilters} onClick={recalcAll} className="w-full">
+                {recalcLoading === "ALL" ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+                    Calculating...
+                  </>
+                ) : (
+                  <>
+                    <Calculator className="h-4 w-4 mr-2" />
+                    Recalculate All
+                  </>
+                )}
               </Button>
             </div>
           </div>
@@ -455,19 +465,11 @@ export default function CombinedEmployeeDashboard() {
               />
             </div>
 
-            <div className="flex items-end">
-              <Button variant="outline" disabled={isBusy || !appliedFilters} onClick={recalcAll} className="w-full">
-                {recalcLoading === "ALL" ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
-                    Calculating...
-                  </>
-                ) : (
-                  <>
-                    <Calculator className="h-4 w-4 mr-2" />
-                    Recalculate All
-                  </>
-                )}
+           
+             <div className="flex items-end">
+              <Button disabled={isBusy} onClick={onSearch} className="w-full">
+                <Calculator className="h-4 w-4 mr-2" />
+                Load Data
               </Button>
             </div>
           </div>
