@@ -10,8 +10,9 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Shree Sai Engineering",
-  description: "Complete manpower management solution with attendance tracking",
+  description: "Employee attendance and payroll management system",
 };
+
 
 export default function RootLayout({
   children,
