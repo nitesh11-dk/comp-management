@@ -52,6 +52,7 @@ export default function EditEmployeePage() {
         bankAccountNumber: "",
         ifscCode: "",
         hourlyRate: "",
+        joinedAt: "", // ✅ ADD THIS
     });
 
     // ------------------ LOAD EMPLOYEE ------------------
@@ -93,6 +94,10 @@ export default function EditEmployeePage() {
                         bankAccountNumber: emp.bankAccountNumber || "",
                         ifscCode: emp.ifscCode || "",
                         hourlyRate: String(emp.hourlyRate),
+                            joinedAt: emp.joinedAt
+      ? emp.joinedAt.split("T")[0]
+      : "", // ✅ IMPORTANT
+
                     });
                 }
             } catch (error) {
@@ -162,6 +167,7 @@ export default function EditEmployeePage() {
                 dob: formData.dob ? new Date(formData.dob) : null,
                 shiftTypeId: formData.shiftTypeId,
                 cycleTimingId: formData.cycleTimingId,
+                joinedAt: new Date(formData.joinedAt), // ✅ VERY IMPORTANT
             };
 
             const res = await updateEmployee(employeeId, payload);
@@ -238,6 +244,12 @@ export default function EditEmployeePage() {
 
                                 <InputField type="date" label="Date of Birth" value={formData.dob}
                                     onChange={(v) => setFormData({ ...formData, dob: v })} />
+<InputField
+  type="date"
+  label="Joining Date *"
+  value={formData.joinedAt}
+  onChange={(v) => setFormData({ ...formData, joinedAt: v })}
+/>
 
                                 <InputField label="Current Address" value={formData.currentAddress}
                                     onChange={(v) => setFormData({ ...formData, currentAddress: v })} />
