@@ -184,7 +184,7 @@ export default function EmployeeManagement() {
                       View
                     </Button>
 
-                    <Button
+                    {/* <Button
                       size="sm"
                       variant="outline"
                       onClick={() =>
@@ -195,7 +195,7 @@ export default function EmployeeManagement() {
                     >
                       <Edit className="h-4 w-4 mr-1" />
                       Edit
-                    </Button>
+                    </Button> */}
                   </td>
                 </tr>
               ))

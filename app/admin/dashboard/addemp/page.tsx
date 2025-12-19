@@ -141,7 +141,7 @@ export default function AddEmployeePage() {
   /* ---------------- BARCODE ---------------- */
   const downloadBarcode = async (code: string) => {
     if (!barcodeRef.current) return;
-    const canvas = await html2canvas(barcodeRef.current, { scale: 2 });
+    const canvas = await html2canvas(barcodeRef.current, { scale: 4, backgroundColor: "#ffffff" });
     const link = document.createElement("a");
     link.href = canvas.toDataURL();
     link.download = `${code}.png`;
@@ -330,7 +330,7 @@ export default function AddEmployeePage() {
               </div>
               <div className="flex flex-col items-center gap-2">
                 <div ref={barcodeRef} className="inline-block bg-white p-4 rounded border">
-                  <Barcode value={generatedEmployee.empCode} />
+                  <Barcode value={generatedEmployee.empCode} width={2} height={100} fontSize={16} />
                 </div>
                 <Button onClick={() => downloadBarcode(generatedEmployee.empCode)} size="sm">
                   <Download className="h-4 w-4 mr-2" /> Download Barcode

@@ -19,7 +19,7 @@ const Page = () => {
 
   const handleCreateFakeEmployees = () => {
     startTransition(async () => {
-      const res = await createFakeEmployees(5);
+      const res = await createFakeEmployees(1);
 
       if (!res.success) {
         alert(res.message || "Failed to create fake employees");

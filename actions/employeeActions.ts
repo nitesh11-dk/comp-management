@@ -247,7 +247,41 @@ export async function updateEmployee(
       data: serializeEmployee(employee),
     };
   } catch (error: any) {
-    return { success: false, message: error.message };
+    console.error("❌ Update Employee Error:", error);
+
+    // Handle unique constraint violations
+    if (error.code === "P2002") {
+      const field = error.meta?.target?.[0];
+      switch (field) {
+        case "aadhaarNumber":
+          return {
+            success: false,
+            message: "Aadhaar number already exists for another employee. Please use a different Aadhaar number.",
+          };
+        case "pfId":
+          return {
+            success: false,
+            message: "PF ID already exists for another employee. Please use a different PF ID.",
+          };
+        case "esicId":
+          return {
+            success: false,
+            message: "ESIC ID already exists for another employee. Please use a different ESIC ID.",
+          };
+        case "panNumber":
+          return {
+            success: false,
+            message: "PAN number already exists for another employee. Please use a different PAN number.",
+          };
+        default:
+          return {
+            success: false,
+            message: "A unique constraint was violated. Please check your input.",
+          };
+      }
+    }
+
+    return { success: false, message: error.message || "Failed to update employee" };
   }
 }
 
@@ -258,9 +292,11 @@ export async function deleteEmployee(
   id: string
 ): Promise<ActionResponse> {
   try {
+    
     await prisma.employee.delete({ where: { id } });
-    return { success: true, message: "Employee deleted" };
+    return { success: true, message: "Employee and all related data deleted successfully" };
   } catch (error: any) {
-    return { success: false, message: error.message };
+    console.error("❌ Delete Employee Error:", error);
+    return { success: false, message: error.message || "Failed to delete employee" };
   }
 }

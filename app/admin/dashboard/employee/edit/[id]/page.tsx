@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
-import { ChevronLeft, Trash2 } from "lucide-react";
+import { ChevronLeft, Trash2, ArrowLeft } from "lucide-react";
 
 export default function EditEmployeePage() {
     const router = useRouter();
@@ -42,6 +42,7 @@ export default function EditEmployeePage() {
         cycleTimingId: null as string | null,
         pfId: "",
         pfActive: true,
+        pfAmountPerDay: 0,
         esicId: "",
         esicActive: true,
         panNumber: "",
@@ -82,6 +83,7 @@ export default function EditEmployeePage() {
                         cycleTimingId: emp.cycleTimingId ?? null,
                         pfId: emp.pfId || "",
                         pfActive: emp.pfActive,
+                        pfAmountPerDay: emp.pfAmountPerDay || 0,
                         esicId: emp.esicId || "",
                         esicActive: emp.esicActive,
                         panNumber: emp.panNumber || "",
@@ -107,11 +109,56 @@ export default function EditEmployeePage() {
     const handleSubmit = async (e: any) => {
         e.preventDefault();
         setIsSubmitting(true);
+        setMessage("");
+
+        // Basic validation
+        if (!formData.name || formData.name.trim().length < 3) {
+            toast.error("Name must be at least 3 characters");
+            setIsSubmitting(false);
+            return;
+        }
+
+        if (!/^\d{12}$/.test(formData.aadhaarNumber)) {
+            toast.error("Aadhaar must be exactly 12 digits");
+            setIsSubmitting(false);
+            return;
+        }
+
+        if (!/^\d{10}$/.test(formData.mobile)) {
+            toast.error("Mobile must be exactly 10 digits");
+            setIsSubmitting(false);
+            return;
+        }
+
+        if (!formData.departmentId) {
+            toast.error("Department is required");
+            setIsSubmitting(false);
+            return;
+        }
+
+        if (formData.panNumber && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(formData.panNumber)) {
+            toast.error("PAN must be in format AAAAA9999A");
+            setIsSubmitting(false);
+            return;
+        }
+
+        if (formData.ifscCode && !/^[A-Z0-9]{11}$/.test(formData.ifscCode)) {
+            toast.error("IFSC must be exactly 11 alphanumeric characters");
+            setIsSubmitting(false);
+            return;
+        }
+
+        if (!formData.hourlyRate || Number(formData.hourlyRate) <= 0) {
+            toast.error("Hourly rate must be positive");
+            setIsSubmitting(false);
+            return;
+        }
 
         try {
             const payload = {
                 ...formData,
                 hourlyRate: Number(formData.hourlyRate),
+                pfAmountPerDay: Number(formData.pfAmountPerDay),
                 dob: formData.dob ? new Date(formData.dob) : null,
                 shiftTypeId: formData.shiftTypeId,
                 cycleTimingId: formData.cycleTimingId,
@@ -122,26 +169,44 @@ export default function EditEmployeePage() {
             if (res.success) {
                 setMessage("Employee updated successfully");
                 setMessageType("success");
+                toast.success("Employee updated successfully");
             } else {
                 setMessage(res.message || "Update failed");
                 setMessageType("error");
+                toast.error(res.message || "Update failed");
             }
         } catch (err) {
             setMessage("Unexpected error");
             setMessageType("error");
+            toast.error("Unexpected error");
         }
 
         setIsSubmitting(false);
     };
 
-    if (loading) return <div className="p-6">Loading...</div>;
+    if (loading) {
+        return (
+            <div className="h-[60vh] flex flex-col items-center justify-center space-y-4">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <p className="text-gray-500 text-center">
+                    Loading employee details...
+                </p>
+            </div>
+        );
+    }
 
     return (
-        <div className="min-h-screen p-4">
+        <div className="min-h-screen p-2">
             <div className="max-w-4xl mx-auto space-y-6">
 
-                <Button variant="outline" onClick={() => router.back()}>
-                    <ChevronLeft className="w-4 h-4" /> Back
+                {/* BACK BUTTON */}
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push("/admin/dashboard")}
+                    className="flex items-center gap-2"
+                >
+                    <ArrowLeft className="h-4 w-4" /> Back to Dashboard
                 </Button>
 
                 <h1 className="text-2xl font-bold">Edit Employee</h1>
@@ -152,42 +217,46 @@ export default function EditEmployeePage() {
                     </CardHeader>
 
                     <CardContent>
-                        <form className="space-y-4" onSubmit={handleSubmit}>
+                        <form className="space-y-6" onSubmit={handleSubmit}>
 
                             {/* BASIC INFO */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                                <InputField label="Name" value={formData.name}
+                                <InputField label="Name *" value={formData.name}
                                     onChange={(v) => setFormData({ ...formData, name: v })} />
 
-                                <InputField label="Aadhaar" value={formData.aadhaarNumber}
-                                    onChange={(v) => setFormData({ ...formData, aadhaarNumber: v })} />
+                                <InputField label="Aadhaar Number *" value={formData.aadhaarNumber}
+                                    onChange={(v) => setFormData({ ...formData, aadhaarNumber: v })}
+                                    maxLength={12} placeholder="12-digit number" />
 
-                                <InputField label="Mobile" value={formData.mobile}
-                                    onChange={(v) => setFormData({ ...formData, mobile: v })} />
+                                <InputField label="Mobile Number *" value={formData.mobile}
+                                    onChange={(v) => setFormData({ ...formData, mobile: v })}
+                                    maxLength={10} placeholder="10-digit number" />
 
-                                <InputField label="PAN" value={formData.panNumber}
-                                    onChange={(v) => setFormData({ ...formData, panNumber: v })} />
+                                <InputField label="PAN Number" value={formData.panNumber}
+                                    onChange={(v) => setFormData({ ...formData, panNumber: v })}
+                                    maxLength={10} placeholder="AAAAA9999A" />
 
-                                <InputField type="date" label="DOB" value={formData.dob}
+                                <InputField type="date" label="Date of Birth" value={formData.dob}
                                     onChange={(v) => setFormData({ ...formData, dob: v })} />
 
                                 <InputField label="Current Address" value={formData.currentAddress}
                                     onChange={(v) => setFormData({ ...formData, currentAddress: v })} />
-
-                                <InputField label="Permanent Address" value={formData.permanentAddress}
-                                    onChange={(v) => setFormData({ ...formData, permanentAddress: v })} />
-
-                                <InputField label="Bank Account No." value={formData.bankAccountNumber}
-                                    onChange={(v) => setFormData({ ...formData, bankAccountNumber: v })} />
-
-                                <InputField label="IFSC Code" value={formData.ifscCode}
-                                    onChange={(v) => setFormData({ ...formData, ifscCode: v })} />
-
                             </div>
 
-                            {/* PF / ESIC */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-md">
+                            <InputField label="Permanent Address" value={formData.permanentAddress}
+                                onChange={(v) => setFormData({ ...formData, permanentAddress: v })} />
+
+                            {/* PAY INFO */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <InputField label="Hourly Rate *" type="number" step="0.01" value={formData.hourlyRate}
+                                    onChange={(v) => setFormData({ ...formData, hourlyRate: v })} />
+
+                                <InputField label="PF Amount Per Day" type="number" step="0.01" value={String(formData.pfAmountPerDay)}
+                                    onChange={(v) => setFormData({ ...formData, pfAmountPerDay: Number(v) })} />
+                            </div>
+
+                            {/* IDENTIFICATION */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border p-4 rounded-md">
                                 <div>
                                     <Label>PF ID</Label>
                                     <Input value={formData.pfId}
@@ -209,44 +278,46 @@ export default function EditEmployeePage() {
                                         <span className="ml-2 text-sm">ESIC Active</span>
                                     </div>
                                 </div>
+
+                                <div className="space-y-2">
+                                    <Label>Bank Account Number</Label>
+                                    <Input value={formData.bankAccountNumber}
+                                        onChange={(e) => setFormData({ ...formData, bankAccountNumber: e.target.value })} />
+                                    <Label>IFSC Code</Label>
+                                    <Input value={formData.ifscCode}
+                                        onChange={(e) => setFormData({ ...formData, ifscCode: e.target.value })}
+                                        maxLength={11} placeholder="11-character code" />
+                                </div>
                             </div>
 
-                            {/* Department Select */}
-                            <SelectField
-                                label="Department"
-                                value={formData.departmentId}
-                                items={departments}
-                                onChange={(v) => setFormData({ ...formData, departmentId: v })}
-                                display={(x) => x.name}
-                            />
+                            {/* ASSIGNMENTS */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <SelectField
+                                    label="Department *"
+                                    value={formData.departmentId}
+                                    items={departments}
+                                    onChange={(v) => setFormData({ ...formData, departmentId: v })}
+                                    display={(x) => x.name}
+                                />
 
-                            {/* Shift Select */}
-                            <SelectField
-                                label="Shift Type"
-                                value={formData.shiftTypeId ?? "null"}
-                                items={shiftTypes}
-                                onChange={(v) => setFormData({ ...formData, shiftTypeId: v === "null" ? null : v })}
-                                display={(x) => `${x.name} — ${x.totalHours} hrs`}
-                                allowNull
-                            />
+                                <SelectField
+                                    label="Shift Type"
+                                    value={formData.shiftTypeId ?? "null"}
+                                    items={shiftTypes}
+                                    onChange={(v) => setFormData({ ...formData, shiftTypeId: v === "null" ? null : v })}
+                                    display={(x) => `${x.name} — ${x.totalHours} hrs`}
+                                    allowNull
+                                />
 
-                            {/* Cycle Select */}
-                            <SelectField
-                                label="Cycle Timing"
-                                value={formData.cycleTimingId ?? "null"}
-                                items={cycleTimings}
-                                onChange={(v) => setFormData({ ...formData, cycleTimingId: v === "null" ? null : v })}
-                                display={(c) => `${c.name} (Start: ${c.startDay})`}
-                                allowNull
-                            />
-
-                            {/* Hourly Rate */}
-                            <InputField
-                                label="Hourly Rate"
-                                type="number"
-                                value={formData.hourlyRate}
-                                onChange={(v) => setFormData({ ...formData, hourlyRate: v })}
-                            />
+                                <SelectField
+                                    label="Cycle Timing"
+                                    value={formData.cycleTimingId ?? "null"}
+                                    items={cycleTimings}
+                                    onChange={(v) => setFormData({ ...formData, cycleTimingId: v === "null" ? null : v })}
+                                    display={(c) => `${c.name} (Start: ${c.startDay})`}
+                                    allowNull
+                                />
+                            </div>
 
                             {/* ALERT */}
                             {message && (
@@ -255,14 +326,14 @@ export default function EditEmployeePage() {
                                 </Alert>
                             )}
 
-                            <div className="flex gap-2">
+                            <div className="flex gap-2  flex-col md:flex-row">
                                 <Button className="flex-1" disabled={isSubmitting}>
-                                    {isSubmitting ? "Updating..." : "Update"}
+                                    {isSubmitting ? "Updating..." : "Update Employee"}
                                 </Button>
 
                                 <Button type="button" variant="outline"
                                     onClick={() => window.location.reload()}>
-                                    <Trash2 className="w-4 h-4" /> Reset
+                                    <Trash2 className="w-4 h-4 mr-2" /> Reset Changes
                                 </Button>
                             </div>
 
@@ -275,11 +346,17 @@ export default function EditEmployeePage() {
 }
 
 /* ------------------ Input Field Component ------------------ */
-function InputField({ label, value, onChange, type = "text" }: any) {
+function InputField({ label, value, onChange, type = "text", maxLength, placeholder }: any) {
     return (
         <div>
             <Label>{label}</Label>
-            <Input type={type} value={value} onChange={(e) => onChange(e.target.value)} />
+            <Input
+                type={type}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                maxLength={maxLength}
+                placeholder={placeholder}
+            />
         </div>
     );
 }

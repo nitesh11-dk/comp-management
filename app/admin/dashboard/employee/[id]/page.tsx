@@ -1,158 +1,97 @@
 // app/admin/dashboard/employee/[id]/page.tsx
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Calendar } from "lucide-react";
 
 import { getEmployeeById } from "@/actions/employeeActions";
 import { getDepartmentById } from "@/actions/department";
 import { getShiftTypeById } from "@/actions/shiftType";
 import { getCycleTimingById } from "@/actions/cycleTimings";
 
-import { calculateWorkLogs, getAttendanceWallet } from "@/actions/attendance";
-
 import EmployeeInfoCard from "@/components/admin/EmployeeInfoCard";
-import WorkLogTable from "@/components/admin/WorkLogTable";
-import { generateFakeAttendance } from "@/actions/fakeattandace";
 
-export default function EmployeeDetailPage() {
+const EmployeeProfilePage = memo(function EmployeeProfilePage() {
   const params = useParams();
   const router = useRouter();
-  const employeeId = params.id;
+  const employeeId = params.id as string;
 
   const [employee, setEmployee] = useState<any>(null);
   const [department, setDepartment] = useState<any>(null);
   const [shiftType, setShiftType] = useState<any>(null);
   const [cycleTiming, setCycleTiming] = useState<any>(null);
-
-  const [workLogs, setWorkLogs] = useState<any[]>([]);
-  const [dayEntries, setDayEntries] = useState<any[]>([]);
-  const [expandedDate, setExpandedDate] = useState<string | null>(null);
-  const [loadingLogs, setLoadingLogs] = useState(true);
+  const [loadingEmployee, setLoadingEmployee] = useState(true);
 
   // -----------------------------------------
   // Load Employee + all related info
   // -----------------------------------------
   const loadEmployee = useCallback(async () => {
     if (!employeeId) return;
+    setLoadingEmployee(true);
 
-    const empRes = await getEmployeeById(employeeId);
-    if (!empRes.success || !empRes.data) return router.push("/");
+    try {
+      const empRes = await getEmployeeById(employeeId);
+      if (!empRes.success || !empRes.data) {
+        router.push("/");
+        return;
+      }
 
-    const emp = empRes.data;
-    setEmployee(emp);
+      const emp = empRes.data;
+      setEmployee(emp);
 
-    // Department
-    const deptRes = await getDepartmentById(emp.departmentId);
-    if (deptRes.success) setDepartment(deptRes.data);
+      // Parallel fetch for better performance
+      const [deptRes, shiftRes, cycleRes] = await Promise.all([
+        getDepartmentById(emp.departmentId),
+        emp.shiftTypeId ? getShiftTypeById(emp.shiftTypeId) : Promise.resolve({ success: false }),
+        emp.cycleTimingId ? getCycleTimingById(emp.cycleTimingId) : Promise.resolve({ success: false }),
+      ]);
 
-    // Shift Type
-    if (emp.shiftTypeId) {
-      const shiftRes = await getShiftTypeById(emp.shiftTypeId);
+      if (deptRes.success) setDepartment(deptRes.data);
       if (shiftRes.success) setShiftType(shiftRes.data);
-    }
-
-    // Cycle Timing
-    if (emp.cycleTimingId) {
-      const cycleRes = await getCycleTimingById(emp.cycleTimingId);
       if (cycleRes.success) setCycleTiming(cycleRes.data);
+    } finally {
+      setLoadingEmployee(false);
     }
-
   }, [employeeId, router]);
 
-  // -----------------------------------------
-  // Refresh attendance logs (work logs)
-  // -----------------------------------------
-  const refreshLogs = useCallback(async () => {
-    if (!employeeId) return;
-    setLoadingLogs(true);
-
-    const wallet = await getAttendanceWallet(employeeId);
-    if (!wallet) {
-      setWorkLogs([]);
-      setDayEntries([]);
-      setLoadingLogs(false);
-      return;
-    }
-
-    const logs = await calculateWorkLogs(wallet.entries, employee?.hourlyRate || 0);
-    setWorkLogs(logs);
-
-    // If expanded day → refresh its entries also
-    if (expandedDate) {
-      const filtered = wallet.entries.filter((e: any) =>
-        e.timestamp.toISOString().startsWith(expandedDate)
-      );
-      setDayEntries(filtered);
-    }
-
-    setLoadingLogs(false);
-  }, [employeeId, expandedDate, employee?.hourlyRate]);
-
   useEffect(() => {
-    (async () => {
-      await loadEmployee();
-      await refreshLogs();
-    })();
-  }, [loadEmployee, refreshLogs]);
+    loadEmployee();
+  }, [loadEmployee]);
 
-  // -----------------------------------------
-  // When clicking a specific date to open logs
-  // -----------------------------------------
-  const handleExpand = async (date: string) => {
-    if (!employee) return;
-
-    if (expandedDate === date) {
-      setExpandedDate(null);
-      setDayEntries([]);
-      return;
-    }
-
-    const wallet = await getAttendanceWallet(employee.id);
-    if (!wallet) return;
-
-    const filtered = wallet.entries.filter((e: any) =>
-      e.timestamp.toISOString().startsWith(date)
-    );
-
-    setExpandedDate(date);
-    setDayEntries(filtered);
-  };
-
-  if (!employee) return <div className="p-6">Loading...</div>;
+  if (loadingEmployee || !employee) return (
+    <div className="p-4 md:p-6">
+      <div className="w-full flex flex-col items-center justify-center py-10">
+        <div className="animate-spin h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full mb-4"></div>
+        <p className="text-gray-600 text-sm">Loading employee details...</p>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-2 md:p-6 space-y-4 md:space-y-6">
 
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="outline" onClick={() => router.back()} size="sm">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+        <Button variant="outline" onClick={() => router.back()} size="sm" className="self-start">
           <ArrowLeft className="h-4 w-4 mr-2" /> Back
         </Button>
-        <h1 className="text-2xl font-bold">{employee.name}</h1>
-        {/* TEMP DEV BUTTON – FAKE ATTENDANCE */}
-<div className="flex gap-3">
-  <Button
-    variant="secondary"
-    onClick={async () => {
-      if (!employee) return;
-
-      setLoadingLogs(true);
-
-      await generateFakeAttendance({
-        employeeId: employee.id,
-        days: 15, // 👈 change days if needed
-      });
-
-      await refreshLogs();
-    }}
-  >
-    Generate Fake Attendance (DEV)
-  </Button>
-</div>
-
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-1">
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold">{employee.name}</h1>
+            <p className="text-muted-foreground">Employee Code: {employee.empCode}</p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push(`/admin/dashboard/employee/${employeeId}/attendance`)}
+            className="self-start"
+          >
+            <Calendar className="h-4 w-4 mr-2" />
+            View Attendance
+          </Button>
+        </div>
       </div>
 
       {/* Employee Info Card */}
@@ -162,23 +101,10 @@ export default function EmployeeDetailPage() {
         shiftType={shiftType}
         cycleTiming={cycleTiming}
       />
-
-      {/* Attendance Logs */}
-      {loadingLogs ? (
-        <div className="w-full flex flex-col items-center justify-center py-10">
-          <div className="animate-spin h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full mb-4"></div>
-          <p className="text-gray-600 text-sm">Loading attendance logs...</p>
-        </div>
-      ) : (
-        <WorkLogTable
-          workLogs={workLogs}
-          expandedDate={expandedDate}
-          dayEntries={dayEntries}
-          onExpand={handleExpand}
-          employeeId={employee.id}
-          onRefresh={refreshLogs}
-        />
-      )}
     </div>
   );
-}
+});
+
+EmployeeProfilePage.displayName = "EmployeeProfilePage";
+
+export default EmployeeProfilePage;

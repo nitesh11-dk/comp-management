@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
 import { loginUser } from "@/actions/login"; // server action
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 
 export default function LoginPage() {
   const router = useRouter();

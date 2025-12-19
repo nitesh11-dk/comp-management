@@ -123,7 +123,7 @@ model MonthlyAttendanceSummary {
   id            String   @id @default(uuid())
 
   employeeId    String
-  employee      Employee @relation(fields: [employeeId], references: [id])
+  employee      Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   cycleStart    DateTime
   cycleEnd      DateTime
@@ -176,9 +176,13 @@ model AttendanceEntry {
   user          User @relation(fields: [scannedBy], references: [id])
 
   walletId      String
-  wallet        AttendanceWallet @relation(fields: [walletId], references: [id])
+  wallet        AttendanceWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
 
   autoClosed    Boolean   @default(false)
+
+  @@index([walletId])
+  @@index([timestamp])
+  @@index([walletId, timestamp])
 }
 
 //
@@ -188,7 +192,7 @@ model AttendanceEntry {
 model AttendanceWallet {
   id         String   @id @default(uuid())
   employeeId String   @unique
-  employee   Employee @relation(fields: [employeeId], references: [id])
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   entries    AttendanceEntry[]
 
