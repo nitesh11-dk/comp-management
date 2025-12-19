@@ -149,7 +149,7 @@ const EmployeeAttendancePage = memo(function EmployeeAttendancePage() {
 
               await generateFakeAttendance({
                 employeeId: employee.id,
-                days: 15,
+                days: 4,
               });
 
               await refreshLogs();

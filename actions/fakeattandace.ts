@@ -17,7 +17,7 @@ function randomTime(baseDate: Date, hourMin: number, hourMax: number) {
 
 export async function generateFakeAttendance({
   employeeId,
-  months = 4,
+  months = 2,
 }: {
   employeeId: string;
   months?: number;
@@ -83,7 +83,7 @@ export async function generateFakeAttendance({
     ).getDate();
 
     // 👉 Only 4–8 days per month
-    const workingDaysCount = randomBetween(4, 8);
+    const workingDaysCount = randomBetween(2, 4);
     const usedDays = new Set<number>();
 
     while (usedDays.size < workingDaysCount) {
