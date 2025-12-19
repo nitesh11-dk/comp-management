@@ -10,10 +10,10 @@ export async function registerUser(formData: {
 }) {
   let { username, password, departmentId } = formData;
 
-  // Normalize username
+  // 🔽 Normalize username (FORCE lowercase)
   username = username.trim().toLowerCase();
 
-  // Validate username format
+  // ✅ Validate username format (lowercase + numbers only)
   const usernameRegex = /^[a-z0-9]+$/;
   if (!usernameRegex.test(username)) {
     return {
@@ -23,7 +23,7 @@ export async function registerUser(formData: {
     };
   }
 
-  // Check if username exists
+  // 🔍 Check if username already exists (lowercase match)
   const existingUser = await prisma.user.findUnique({
     where: { username },
   });
@@ -32,15 +32,15 @@ export async function registerUser(formData: {
     return { success: false, message: "Username already exists" };
   }
 
-  // Hash password
+  // 🔐 Hash password
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  // Create ONLY supervisor
+  // 👤 Create ONLY supervisor (hard-coded)
   const user = await prisma.user.create({
     data: {
-      username,
+      username, // ✅ always lowercase
       password: hashedPassword,
-      role: "supervisor", // 🔒 hard-coded
+      role: "supervisor",
       departmentId,
     },
   });
@@ -50,7 +50,7 @@ export async function registerUser(formData: {
     message: "Supervisor registered successfully",
     user: {
       id: user.id,
-      username: user.username,
+      username: user.username, // lowercase from DB
       role: user.role,
       departmentId: user.departmentId,
     },

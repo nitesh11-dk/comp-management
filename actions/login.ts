@@ -21,14 +21,17 @@ type LoginResponse =
 export async function loginUser(
   formData: FormData
 ): Promise<LoginResponse> {
-  const username = formData.get("username") as string | null;
+  const rawUsername = formData.get("username") as string | null;
   const password = formData.get("password") as string | null;
 
-  if (!username || !password) {
+  if (!rawUsername || !password) {
     return { success: false, message: "Username and password are required" };
   }
 
-  // 🔍 Find user
+  // 🔽 Normalize username (FORM SIDE)
+  const username = rawUsername.toLowerCase().trim();
+
+  // 🔍 Find user (DB SIDE — lowercase match)
   const user = await prisma.user.findUnique({
     where: { username },
   });
@@ -43,7 +46,7 @@ export async function loginUser(
     return { success: false, message: "Invalid credentials" };
   }
 
-  // 🎫 Create JWT (ONLY trusted data)
+  // 🎫 Create JWT (trusted data only)
   const token = jwt.sign(
     {
       id: user.id,
@@ -61,16 +64,16 @@ export async function loginUser(
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
     path: "/",
-    maxAge: 60 * 60 * 24 * 7, // 7 days
+    maxAge: 60 * 60 * 24 * 7,
   });
 
-  // ✅ Return ONLY non-sensitive user data
+  // ✅ Return safe user data
   return {
     success: true,
     message: "Login successful",
     user: {
       id: user.id,
-      username: user.username,
+      username: user.username, // already lowercase in DB
       role: user.role,
       departmentId: user.departmentId,
     },
