@@ -42,6 +42,8 @@ export async function createEmployee(
   data: any
 ): Promise<ActionResponse<any>> {
   try {
+    /* ---------- VALIDATIONS ---------- */
+
     if (!data.name || data.name.trim().length < 3) {
       return { success: false, message: "Name must be at least 3 characters" };
     }
@@ -63,7 +65,20 @@ export async function createEmployee(
       return { success: false, message: "Mobile must be 10 digits" };
     }
 
+    // ✅ PF Amount Per Day validation
+    if (
+      data.pfAmountPerDay !== undefined &&
+      (isNaN(Number(data.pfAmountPerDay)) || Number(data.pfAmountPerDay) < 0)
+    ) {
+      return {
+        success: false,
+        message: "PF amount per day must be a valid non-negative number",
+      };
+    }
+
     const empCode = await generateUniqueEmpCode();
+
+    /* ---------- CREATE ---------- */
 
     const employee = await prisma.employee.create({
       data: {
@@ -76,6 +91,10 @@ export async function createEmployee(
 
         pfId: data.pfId || null,
         pfActive: data.pfActive ?? true,
+        pfAmountPerDay:
+          data.pfAmountPerDay !== undefined
+            ? Number(data.pfAmountPerDay)
+            : 0,
 
         esicId: data.esicId || null,
         esicActive: data.esicActive ?? true,
@@ -109,13 +128,13 @@ export async function createEmployee(
       data: serializeEmployee(employee),
     };
   } catch (error: any) {
-    console.error(error);
+    console.error("❌ Create Employee Error:", error);
     return { success: false, message: error.message };
   }
 }
 
 /* ----------------------------------------------------
-   GET EMPLOYEES ✅ (THIS FIXES YOUR ERROR)
+   GET EMPLOYEES
 ---------------------------------------------------- */
 export async function getEmployees(): Promise<ActionResponse<any[]>> {
   try {
@@ -139,7 +158,9 @@ export async function getEmployees(): Promise<ActionResponse<any[]>> {
 /* ----------------------------------------------------
    GET SINGLE EMPLOYEE
 ---------------------------------------------------- */
-export async function getEmployeeById(id: string): Promise<ActionResponse<any>> {
+export async function getEmployeeById(
+  id: string
+): Promise<ActionResponse<any>> {
   try {
     const emp = await prisma.employee.findUnique({ where: { id } });
     if (!emp) return { success: false, message: "Employee not found" };
@@ -158,11 +179,24 @@ export async function updateEmployee(
   updates: any
 ): Promise<ActionResponse<any>> {
   try {
-    if (updates.joinedAt)
-      updates.joinedAt = new Date(updates.joinedAt);
+    if (updates.joinedAt) updates.joinedAt = new Date(updates.joinedAt);
+    if (updates.dob) updates.dob = new Date(updates.dob);
 
-    if (updates.dob)
-      updates.dob = new Date(updates.dob);
+    // ✅ PF Amount validation during update
+    if (
+      updates.pfAmountPerDay !== undefined &&
+      (isNaN(Number(updates.pfAmountPerDay)) ||
+        Number(updates.pfAmountPerDay) < 0)
+    ) {
+      return {
+        success: false,
+        message: "PF amount per day must be a valid non-negative number",
+      };
+    }
+
+    if (updates.pfAmountPerDay !== undefined) {
+      updates.pfAmountPerDay = Number(updates.pfAmountPerDay);
+    }
 
     const employee = await prisma.employee.update({
       where: { id },
@@ -182,7 +216,9 @@ export async function updateEmployee(
 /* ----------------------------------------------------
    DELETE EMPLOYEE
 ---------------------------------------------------- */
-export async function deleteEmployee(id: string): Promise<ActionResponse> {
+export async function deleteEmployee(
+  id: string
+): Promise<ActionResponse> {
   try {
     await prisma.employee.delete({ where: { id } });
     return { success: true, message: "Employee deleted" };

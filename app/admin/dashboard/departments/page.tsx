@@ -32,13 +32,16 @@ export default function DepartmentsPage() {
     const [departments, setDepartments] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const [isCreating, setIsCreating] = useState(false);
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
     const [editRowId, setEditRowId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState({ name: "", description: "" });
 
     const [newDept, setNewDept] = useState({ name: "", description: "" });
 
     const [deleteId, setDeleteId] = useState<string | null>(null);
-    const [deleteError, setDeleteError] = useState<string>("");
 
     // Load Departments
     const loadDepartments = async () => {
@@ -56,13 +59,15 @@ export default function DepartmentsPage() {
     // Create
     const handleCreate = async (e: any) => {
         e.preventDefault();
+        setIsCreating(true);
         const res = await createDepartment(newDept);
 
         if (res.success) {
             toast.success("Department created");
+            setDepartments((prev) => [res.data, ...prev]); // Add to state
             setNewDept({ name: "", description: "" });
-            loadDepartments();
         } else toast.error(res.message);
+        setIsCreating(false);
     };
 
     // Start Editing
@@ -76,14 +81,18 @@ export default function DepartmentsPage() {
 
     // Save Edit
     const handleSave = async (id: string) => {
+        setIsUpdating(true);
         const res = await updateDepartment(id, editForm);
 
         if (res.success) {
             toast.success("Updated successfully");
+            setDepartments((prev) =>
+                prev.map((d) => (d.id === id ? res.data : d))
+            ); // Update in state
             setEditRowId(null);
             setEditForm({ name: "", description: "" });
-            loadDepartments();
         } else toast.error(res.message);
+        setIsUpdating(false);
     };
 
     // Cancel edit
@@ -96,20 +105,21 @@ export default function DepartmentsPage() {
     const handleDeleteConfirmed = async () => {
         if (!deleteId) return;
 
+        setIsDeleting(true);
         const res = await deleteDepartment(deleteId);
 
         if (res.success) {
             toast.success("Department deleted");
-            setDeleteError("");
+            setDepartments((prev) => prev.filter((d) => d.id !== deleteId)); // Remove from state
             setDeleteId(null);
-            loadDepartments();
         } else {
-            setDeleteError(res.message); // show error inside modal
+            toast.error(res.message);
         }
+        setIsDeleting(false);
     };
 
     return (
-        <div className="p-6 space-y-6">
+        <div className="2 space-y-6">
 
             {/* BACK BUTTON */}
             <Button
@@ -125,7 +135,7 @@ export default function DepartmentsPage() {
             <h1 className="text-2xl font-bold">Department Management</h1>
 
             {/* ADD NEW DEPARTMENT */}
-            <Card className="md:max-w-lg">
+            <Card className="w-full md:max-w-lg">
                 <CardHeader>
                     <CardTitle>Add Department</CardTitle>
                 </CardHeader>
@@ -147,8 +157,8 @@ export default function DepartmentsPage() {
                             }
                         />
 
-                        <Button type="submit" className="w-full">
-                            Add Department
+                        <Button type="submit" disabled={isCreating} className="w-full">
+                            {isCreating ? "Creating..." : "Add Department"}
                         </Button>
                     </form>
                 </CardContent>
@@ -164,13 +174,13 @@ export default function DepartmentsPage() {
                     {loading ? (
                         <p>Loading…</p>
                     ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full border text-sm">
+                        <div className="overflow-auto max-h-96">
+                            <table className="w-full border text-xs md:text-sm min-w-max">
                                 <thead className="bg-gray-100">
                                     <tr>
-                                        <th className="border px-3 py-2 text-left">Name</th>
-                                        <th className="border px-3 py-2 text-left">Description</th>
-                                        <th className="border px-3 py-2 text-center">Actions</th>
+                                        <th className="border px-2 md:px-3 py-2 text-left">Name</th>
+                                        <th className="border px-2 md:px-3 py-2 text-left">Description</th>
+                                        <th className="border px-2 md:px-3 py-2 text-center">Actions</th>
                                     </tr>
                                 </thead>
 
@@ -182,7 +192,7 @@ export default function DepartmentsPage() {
                                             <tr key={dept.id} className="odd:bg-white even:bg-gray-50">
 
                                                 {/* Name */}
-                                                <td className="border px-3 py-2">
+                                                <td className="border px-2 md:px-3 py-2">
                                                     {editing ? (
                                                         <Input
                                                             value={editForm.name}
@@ -199,7 +209,7 @@ export default function DepartmentsPage() {
                                                 </td>
 
                                                 {/* Description */}
-                                                <td className="border px-3 py-2">
+                                                <td className="border px-2 md:px-3 py-2">
                                                     {editing ? (
                                                         <Input
                                                             value={editForm.description}
@@ -216,7 +226,7 @@ export default function DepartmentsPage() {
                                                 </td>
 
                                                 {/* Actions */}
-                                                <td className="border px-3 py-2 text-center">
+                                                <td className="border px-2 md:px-3 py-2 text-center">
                                                     {!editing ? (
                                                         <div className="flex justify-center gap-3">
 
@@ -235,7 +245,6 @@ export default function DepartmentsPage() {
                                                                 onOpenChange={(open) => {
                                                                     if (!open) {
                                                                         setDeleteId(null);
-                                                                        setDeleteError("");
                                                                     }
                                                                 }}
                                                             >
@@ -258,16 +267,10 @@ export default function DepartmentsPage() {
                                                                         </AlertDialogTitle>
                                                                     </AlertDialogHeader>
 
-                                                                    {deleteError ? (
-                                                                        <p className="text-red-600 font-medium">
-                                                                            {deleteError}
-                                                                        </p>
-                                                                    ) : (
-                                                                        <p>
-                                                                            Are you sure you want to delete this
-                                                                            department?
-                                                                        </p>
-                                                                    )}
+                                                                    <p>
+                                                                        Are you sure you want to delete this
+                                                                        department?
+                                                                    </p>
 
                                                                     <AlertDialogFooter>
                                                                         <AlertDialogCancel>
@@ -276,8 +279,9 @@ export default function DepartmentsPage() {
 
                                                                         <AlertDialogAction
                                                                             onClick={handleDeleteConfirmed}
+                                                                            disabled={isDeleting}
                                                                         >
-                                                                            Delete
+                                                                            {isDeleting ? "Deleting..." : "Delete"}
                                                                         </AlertDialogAction>
                                                                     </AlertDialogFooter>
                                                                 </AlertDialogContent>
@@ -289,6 +293,7 @@ export default function DepartmentsPage() {
                                                                 size="icon"
                                                                 className="bg-green-600 text-white"
                                                                 onClick={() => handleSave(dept.id)}
+                                                                disabled={isUpdating}
                                                             >
                                                                 <Check className="h-4 w-4" />
                                                             </Button>

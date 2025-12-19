@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { useState, useEffect, useRef } from "react";
 import { Menu, X } from "lucide-react";
 
@@ -97,7 +97,7 @@ export default function AdminLayout({
             </header>
 
             {/* 🔹 Content Area */}
-            <main className="flex-1 p-6">{children}</main>
+            <main className="flex-1 p-4">{children}</main>
         </div>
     );
 }

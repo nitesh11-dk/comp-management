@@ -46,7 +46,7 @@ export async function createCycleTiming(data: {
         }
 
         // Check duplicate name
-        const exists = await prisma.cycleTiming.findUnique({
+        const exists = await prisma.cycleTiming.findFirst({
             where: { name: data.name },
         });
         if (exists) {
@@ -185,6 +185,19 @@ export async function deleteCycleTiming(
     id: string
 ): Promise<ActionResponse> {
     try {
+        // Check if cycle timing has any employees assigned
+        const employeeCount = await prisma.employee.count({
+            where: { cycleTimingId: id },
+        });
+
+        if (employeeCount > 0) {
+            return {
+                success: false,
+                message: `Cannot delete cycle timing because it has ${employeeCount} employee(s) assigned. Please reassign them to another cycle first.`,
+                data: null,
+            };
+        }
+
         await prisma.cycleTiming.delete({
             where: { id },
         });

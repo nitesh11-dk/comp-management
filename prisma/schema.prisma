@@ -56,10 +56,16 @@ model Employee {
   id             String       @id @default(uuid())
   empCode        String       @unique
   name           String
+
   pfId           String?      @unique
   pfActive       Boolean      @default(true)
+
+  // ✅ NEW FIELD
+  pfAmountPerDay Float?       @default(0)
+
   esicId         String?      @unique
   esicActive     Boolean      @default(true)
+
   aadhaarNumber  String       @unique
   panNumber      String?      @unique
   dob            DateTime?
@@ -86,13 +92,11 @@ model Employee {
   attendanceWallet AttendanceWallet?
   monthlySummaries MonthlyAttendanceSummary[]
 
-  // ✅ NEW FIELD (IMPORTANT)
-  joinedAt DateTime // ← REAL JOIN DATE (business logic)
+  joinedAt DateTime
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
-
 
 //
 // ---------------------- CYCLE TIMING ----------------------

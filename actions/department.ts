@@ -126,6 +126,19 @@ export async function updateDepartment(
  */
 export async function deleteDepartment(id: string) {
     try {
+        // Check if department has any employees
+        const employeeCount = await prisma.employee.count({
+            where: { departmentId: id },
+        });
+
+        if (employeeCount > 0) {
+            return {
+                success: false,
+                message: ` Cannot delete department because it has ${employeeCount} employee(s) assigned. Please reassign them to another department first.`,
+                data: null,
+            };
+        }
+
         await prisma.department.delete({
             where: { id },
         });

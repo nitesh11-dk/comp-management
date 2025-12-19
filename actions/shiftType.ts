@@ -118,6 +118,19 @@ export async function updateShiftType(
  */
 export async function deleteShiftType(id: string) {
     try {
+        // Check if shift type has any employees assigned
+        const employeeCount = await prisma.employee.count({
+            where: { shiftTypeId: id },
+        });
+
+        if (employeeCount > 0) {
+            return {
+                success: false,
+                message: `Cannot delete shift type because it has ${employeeCount} employee(s) assigned. Please reassign them to another shift first.`,
+                data: null,
+            };
+        }
+
         await prisma.shiftType.delete({ where: { id } });
 
         return { success: true, message: "Shift deleted", data: null };

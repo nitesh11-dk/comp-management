@@ -70,7 +70,6 @@
     "react-dom": "^18",
     "react-hook-form": "latest",
     "react-resizable-panels": "latest",
-    "react-toastify": "^11.0.5",
     "react-webcam": "^7.2.0",
     "recharts": "latest",
     "sonner": "latest",

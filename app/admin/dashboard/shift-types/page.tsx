@@ -32,6 +32,10 @@ export default function ShiftTypesPage() {
     const [shiftTypes, setShiftTypes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const [isCreating, setIsCreating] = useState(false);
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
     const [editRowId, setEditRowId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState({
         name: "",
@@ -46,7 +50,6 @@ export default function ShiftTypesPage() {
     });
 
     const [deleteId, setDeleteId] = useState<string | null>(null);
-    const [deleteError, setDeleteError] = useState("");
 
     // Convert stored ISO → HH:mm
     const formatTime = (dateStr: string) => {
@@ -79,6 +82,7 @@ export default function ShiftTypesPage() {
             return;
         }
 
+        setIsCreating(true);
         const today = new Date().toISOString().slice(0, 10);
 
         const res = await createShiftType({
@@ -89,9 +93,10 @@ export default function ShiftTypesPage() {
 
         if (res.success) {
             toast.success("Shift created");
+            setShiftTypes((prev) => [res.data, ...prev]); // Add to state
             setNewShift({ name: "", startTime: "", endTime: "" });
-            loadShiftTypes();
         } else toast.error(res.message);
+        setIsCreating(false);
     };
 
     // Start Edit
@@ -112,6 +117,7 @@ export default function ShiftTypesPage() {
             return;
         }
 
+        setIsUpdating(true);
         const today = new Date().toISOString().slice(0, 10);
 
         const res = await updateShiftType(id, {
@@ -122,12 +128,15 @@ export default function ShiftTypesPage() {
 
         if (res.success) {
             toast.success("Updated successfully");
+            setShiftTypes((prev) =>
+                prev.map((s) => (s.id === id ? res.data : s))
+            ); // Update in state
             setEditRowId(null);
             setEditForm({ name: "", startTime: "", endTime: "" });
-            loadShiftTypes();
         } else {
             toast.error(res.message);
         }
+        setIsUpdating(false);
     };
 
     // Cancel Edit
@@ -140,20 +149,21 @@ export default function ShiftTypesPage() {
     const handleDeleteConfirmed = async () => {
         if (!deleteId) return;
 
+        setIsDeleting(true);
         const res = await deleteShiftType(deleteId);
 
         if (res.success) {
             toast.success("Shift deleted");
+            setShiftTypes((prev) => prev.filter((s) => s.id !== deleteId)); // Remove from state
             setDeleteId(null);
-            setDeleteError("");
-            loadShiftTypes();
         } else {
-            setDeleteError(res.message);
+            toast.error(res.message);
         }
+        setIsDeleting(false);
     };
 
     return (
-        <div className="p-6 space-y-6">
+        <div className="p-2 space-y-6">
 
             {/* BACK BUTTON */}
             <Button
@@ -168,7 +178,7 @@ export default function ShiftTypesPage() {
             <h1 className="text-2xl font-bold">Shift Type Management</h1>
 
             {/* ADD SHIFT */}
-            <Card className="md:max-w-lg">
+            <Card className="w-full md:max-w-lg">
                 <CardHeader>
                     <CardTitle>Add Shift Type</CardTitle>
                 </CardHeader>
@@ -205,8 +215,8 @@ export default function ShiftTypesPage() {
                             />
                         </div>
 
-                        <Button type="submit" className="w-full">
-                            Add Shift
+                        <Button type="submit" disabled={isCreating} className="w-full">
+                            {isCreating ? "Creating..." : "Add Shift"}
                         </Button>
                     </form>
                 </CardContent>
@@ -222,15 +232,15 @@ export default function ShiftTypesPage() {
                     {loading ? (
                         <p>Loading…</p>
                     ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full border text-sm">
+                        <div className="overflow-auto max-h-96">
+                            <table className="w-full border text-xs md:text-sm min-w-max">
                                 <thead className="bg-gray-100">
                                     <tr>
-                                        <th className="border px-3 py-2 text-left">Name</th>
-                                        <th className="border px-3 py-2 text-center">Start</th>
-                                        <th className="border px-3 py-2 text-center">End</th>
-                                        <th className="border px-3 py-2 text-center">Hours</th>
-                                        <th className="border px-3 py-2 text-center">Actions</th>
+                                        <th className="border px-2 md:px-3 py-2 text-left">Name</th>
+                                        <th className="border px-2 md:px-3 py-2 text-center">Start</th>
+                                        <th className="border px-2 md:px-3 py-2 text-center">End</th>
+                                        <th className="border px-2 md:px-3 py-2 text-center">Hours</th>
+                                        <th className="border px-2 md:px-3 py-2 text-center">Actions</th>
                                     </tr>
                                 </thead>
 
@@ -242,7 +252,7 @@ export default function ShiftTypesPage() {
                                             <tr key={shift.id} className="odd:bg-white even:bg-gray-50">
 
                                                 {/* NAME */}
-                                                <td className="border px-3 py-2">
+                                                <td className="border px-2 md:px-3 py-2">
                                                     {editing ? (
                                                         <Input
                                                             value={editForm.name}
@@ -256,7 +266,7 @@ export default function ShiftTypesPage() {
                                                 </td>
 
                                                 {/* START */}
-                                                <td className="border px-3 py-2 text-center">
+                                                <td className="border px-2 md:px-3 py-2 text-center">
                                                     {editing ? (
                                                         <Input
                                                             type="time"
@@ -271,7 +281,7 @@ export default function ShiftTypesPage() {
                                                 </td>
 
                                                 {/* END */}
-                                                <td className="border px-3 py-2 text-center">
+                                                <td className="border px-2 md:px-3 py-2 text-center">
                                                     {editing ? (
                                                         <Input
                                                             type="time"
@@ -286,12 +296,12 @@ export default function ShiftTypesPage() {
                                                 </td>
 
                                                 {/* HOURS */}
-                                                <td className="border px-3 py-2 text-center font-semibold">
+                                                <td className="border px-2 md:px-3 py-2 text-center font-semibold">
                                                     {shift.totalHours} h
                                                 </td>
 
                                                 {/* ACTIONS */}
-                                                <td className="border px-3 py-2 text-center">
+                                                <td className="border px-2 md:px-3 py-2 text-center">
                                                     {!editing ? (
                                                         <div className="flex justify-center gap-3">
 
@@ -308,7 +318,6 @@ export default function ShiftTypesPage() {
                                                                 onOpenChange={(open) => {
                                                                     if (!open) {
                                                                         setDeleteId(null);
-                                                                        setDeleteError("");
                                                                     }
                                                                 }}
                                                             >
@@ -329,11 +338,7 @@ export default function ShiftTypesPage() {
                                                                         </AlertDialogTitle>
                                                                     </AlertDialogHeader>
 
-                                                                    {deleteError ? (
-                                                                        <p className="text-red-600">{deleteError}</p>
-                                                                    ) : (
-                                                                        <p>Are you sure?</p>
-                                                                    )}
+                                                                    <p>Are you sure?</p>
 
                                                                     <AlertDialogFooter>
                                                                         <AlertDialogCancel>
@@ -342,8 +347,9 @@ export default function ShiftTypesPage() {
 
                                                                         <AlertDialogAction
                                                                             onClick={handleDeleteConfirmed}
+                                                                            disabled={isDeleting}
                                                                         >
-                                                                            Delete
+                                                                            {isDeleting ? "Deleting..." : "Delete"}
                                                                         </AlertDialogAction>
                                                                     </AlertDialogFooter>
                                                                 </AlertDialogContent>
@@ -355,6 +361,7 @@ export default function ShiftTypesPage() {
                                                                 size="icon"
                                                                 className="bg-green-600 text-white"
                                                                 onClick={() => handleSave(shift.id)}
+                                                                disabled={isUpdating}
                                                             >
                                                                 <Check className="h-4 w-4" />
                                                             </Button>

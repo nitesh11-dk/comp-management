@@ -32,6 +32,10 @@ export default function CycleTimingsPage() {
   const [cycles, setCycles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [isCreating, setIsCreating] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const [editId, setEditId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
     name: "",
@@ -48,7 +52,6 @@ export default function CycleTimingsPage() {
   });
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [deleteError, setDeleteError] = useState("");
 
   /* ---------------- LOAD ---------------- */
   const loadCycles = async () => {
@@ -72,6 +75,7 @@ export default function CycleTimingsPage() {
       return;
     }
 
+    setIsCreating(true);
     const res = await createCycleTiming({
       name: newCycle.name,
       startDay: Number(newCycle.startDay),
@@ -81,9 +85,10 @@ export default function CycleTimingsPage() {
 
     if (res.success) {
       toast.success("Cycle timing created");
+      setCycles((prev) => [res.data, ...prev]); // Add to state
       setNewCycle({ name: "", startDay: 1, lengthDays: 30, description: "" });
-      loadCycles();
     } else toast.error(res.message);
+    setIsCreating(false);
   };
 
   /* ---------------- EDIT ---------------- */
@@ -98,6 +103,7 @@ export default function CycleTimingsPage() {
   };
 
   const saveEdit = async (id: string) => {
+    setIsUpdating(true);
     const res = await updateCycleTiming(id, {
       name: editForm.name,
       startDay: Number(editForm.startDay),
@@ -107,9 +113,12 @@ export default function CycleTimingsPage() {
 
     if (res.success) {
       toast.success("Updated successfully");
+      setCycles((prev) =>
+        prev.map((c) => (c.id === id ? res.data : c))
+      ); // Update in state
       setEditId(null);
-      loadCycles();
     } else toast.error(res.message);
+    setIsUpdating(false);
   };
 
   const cancelEdit = () => {
@@ -120,18 +129,21 @@ export default function CycleTimingsPage() {
   const confirmDelete = async () => {
     if (!deleteId) return;
 
+    setIsDeleting(true);
     const res = await deleteCycleTiming(deleteId);
 
     if (res.success) {
       toast.success("Cycle timing deleted");
+      setCycles((prev) => prev.filter((c) => c.id !== deleteId)); // Remove from state
       setDeleteId(null);
-      setDeleteError("");
-      loadCycles();
-    } else setDeleteError(res.message);
+    } else {
+      toast.error(res.message);
+    }
+    setIsDeleting(false);
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-2 space-y-6">
 
       {/* BACK */}
       <Button
@@ -146,7 +158,7 @@ export default function CycleTimingsPage() {
       <h1 className="text-2xl font-bold">Cycle Timing Management</h1>
 
       {/* ADD */}
-      <Card className="md:max-w-lg">
+      <Card className="w-full md:max-w-lg">
         <CardHeader>
           <CardTitle>Add Cycle Timing</CardTitle>
         </CardHeader>
@@ -197,8 +209,8 @@ export default function CycleTimingsPage() {
               }
             />
 
-            <Button type="submit" className="w-full">
-              Add Cycle Timing
+            <Button type="submit" disabled={isCreating} className="w-full">
+              {isCreating ? "Creating..." : "Add Cycle Timing"}
             </Button>
           </form>
         </CardContent>
@@ -214,15 +226,15 @@ export default function CycleTimingsPage() {
           {loading ? (
             <p>Loading…</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full border text-sm">
+            <div className="overflow-auto max-h-96">
+              <table className="w-full border text-xs md:text-sm min-w-max">
                 <thead className="bg-gray-100">
                   <tr>
-                    <th className="border px-3 py-2">Name</th>
-                    <th className="border px-3 py-2 text-center">Start Day</th>
-                    <th className="border px-3 py-2 text-center">Length</th>
-                    <th className="border px-3 py-2">Description</th>
-                    <th className="border px-3 py-2 text-center">Actions</th>
+                    <th className="border px-2 md:px-3 py-2">Name</th>
+                    <th className="border px-2 md:px-3 py-2 text-center">Start Day</th>
+                    <th className="border px-2 md:px-3 py-2 text-center">Length</th>
+                    <th className="border px-2 md:px-3 py-2">Description</th>
+                    <th className="border px-2 md:px-3 py-2 text-center">Actions</th>
                   </tr>
                 </thead>
 
@@ -333,18 +345,14 @@ export default function CycleTimingsPage() {
                                     </AlertDialogTitle>
                                   </AlertDialogHeader>
 
-                                  {deleteError ? (
-                                    <p className="text-red-600">{deleteError}</p>
-                                  ) : (
-                                    <p>Are you sure?</p>
-                                  )}
+                                  <p>Are you sure?</p>
 
                                   <AlertDialogFooter>
                                     <AlertDialogCancel>
                                       Cancel
                                     </AlertDialogCancel>
-                                    <AlertDialogAction onClick={confirmDelete}>
-                                      Delete
+                                    <AlertDialogAction onClick={confirmDelete} disabled={isDeleting}>
+                                      {isDeleting ? "Deleting..." : "Delete"}
                                     </AlertDialogAction>
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
@@ -356,6 +364,7 @@ export default function CycleTimingsPage() {
                                 size="icon"
                                 className="bg-green-600 text-white"
                                 onClick={() => saveEdit(c.id)}
+                                disabled={isUpdating}
                               >
                                 <Check className="h-4 w-4" />
                               </Button>

@@ -46,6 +46,8 @@ const employeeSchema = z.object({
   pfId: z.string().nullable(),
   pfActive: z.boolean().optional(),
 
+  pfAmountPerDay: z.number().default(0),
+
   esicId: z.string().nullable(),
   esicActive: z.boolean().optional(),
 
@@ -98,6 +100,7 @@ export default function AddEmployeePage() {
 
       pfId: null,
       pfActive: true,
+      pfAmountPerDay: 0,
       esicId: null,
       esicActive: true,
       panNumber: null,
@@ -237,6 +240,10 @@ export default function AddEmployeePage() {
             {/* PAY */}
             <InputBlock label="Hourly Rate">
               <Input type="number" {...register("hourlyRate", { valueAsNumber: true })} />
+            </InputBlock>
+
+            <InputBlock label="PF Amount Per Day">
+              <Input type="number" step="0.01" {...register("pfAmountPerDay", { valueAsNumber: true })} />
             </InputBlock>
 
 {/* DOB */}

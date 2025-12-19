@@ -3,10 +3,8 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
-// Import react-toastify
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css"; // Toast default styles
-// import "./toast-custom.css"; // optional for Tailwind overrides
+// Import Sonner
+import { Toaster } from "sonner";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -25,19 +23,8 @@ export default function RootLayout({
       <body className={inter.className}>
         {children}
 
-        {/* Toast container */}
-        <ToastContainer
-          position="top-right"
-          autoClose={3000}
-          hideProgressBar={false}
-          newestOnTop={true}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="light" // you can switch to dark if you want
-        />
+        {/* Toaster */}
+        <Toaster />
       </body>
     </html>
   );
