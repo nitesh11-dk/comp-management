@@ -214,32 +214,93 @@ export async function getEmployeeById(
 }
 
 /* ----------------------------------------------------
-   UPDATE EMPLOYEE
+   UPDATE EMPLOYEE (PRODUCTION SAFE)
 ---------------------------------------------------- */
 export async function updateEmployee(
   id: string,
   updates: any
 ): Promise<ActionResponse<any>> {
   try {
+    /* ----------------------------
+       DATE NORMALIZATION
+    ---------------------------- */
     if (updates.joinedAt) updates.joinedAt = new Date(updates.joinedAt);
     if (updates.dob) updates.dob = new Date(updates.dob);
 
-    // ✅ PF Amount validation during update
-    if (
-      updates.pfAmountPerDay !== undefined &&
-      (isNaN(Number(updates.pfAmountPerDay)) ||
-        Number(updates.pfAmountPerDay) < 0)
-    ) {
-      return {
-        success: false,
-        message: "PF amount per day must be a valid non-negative number",
-      };
+    /* ----------------------------
+       NUMBER NORMALIZATION
+    ---------------------------- */
+    if (updates.hourlyRate !== undefined) {
+      const rate = Number(updates.hourlyRate);
+      if (isNaN(rate) || rate <= 0) {
+        return {
+          success: false,
+          message: "Hourly rate must be a valid positive number",
+        };
+      }
+      updates.hourlyRate = rate;
     }
 
     if (updates.pfAmountPerDay !== undefined) {
-      updates.pfAmountPerDay = Number(updates.pfAmountPerDay);
+      const pf = Number(updates.pfAmountPerDay);
+      if (isNaN(pf) || pf < 0) {
+        return {
+          success: false,
+          message: "PF amount per day must be a valid non-negative number",
+        };
+      }
+      updates.pfAmountPerDay = pf;
     }
 
+    /* ----------------------------
+       EMPTY STRING → NULL
+       (CRITICAL FOR UNIQUE FIELDS)
+    ---------------------------- */
+    const nullableStringFields = [
+      "pfId",
+      "esicId",
+      "panNumber",
+      "bankAccountNumber",
+      "ifscCode",
+      "currentAddress",
+      "permanentAddress",
+    ];
+
+    for (const field of nullableStringFields) {
+      if (
+        updates[field] !== undefined &&
+        typeof updates[field] === "string" &&
+        updates[field].trim() === ""
+      ) {
+        updates[field] = null;
+      }
+    }
+
+    /* ----------------------------
+       BOOLEAN NORMALIZATION
+    ---------------------------- */
+    if (updates.pfActive !== undefined) {
+      updates.pfActive = Boolean(updates.pfActive);
+    }
+
+    if (updates.esicActive !== undefined) {
+      updates.esicActive = Boolean(updates.esicActive);
+    }
+
+    /* ----------------------------
+       FK NULL HANDLING
+    ---------------------------- */
+    const nullableForeignKeys = ["shiftTypeId", "cycleTimingId"];
+
+    for (const field of nullableForeignKeys) {
+      if (updates[field] === "" || updates[field] === "null") {
+        updates[field] = null;
+      }
+    }
+
+    /* ----------------------------
+       UPDATE DB
+    ---------------------------- */
     const employee = await prisma.employee.update({
       where: { id },
       data: updates,
@@ -247,45 +308,42 @@ export async function updateEmployee(
 
     return {
       success: true,
-      message: "Employee updated",
+      message: "Employee updated successfully",
       data: serializeEmployee(employee),
     };
   } catch (error: any) {
     console.error("❌ Update Employee Error:", error);
 
-    // Handle unique constraint violations
+    /* ----------------------------
+       UNIQUE CONSTRAINT HANDLING
+    ---------------------------- */
     if (error.code === "P2002") {
       const field = error.meta?.target?.[0];
-      switch (field) {
-        case "aadhaarNumber":
-          return {
-            success: false,
-            message: "Aadhaar number already exists for another employee. Please use a different Aadhaar number.",
-          };
-        case "pfId":
-          return {
-            success: false,
-            message: "PF ID already exists for another employee. Please use a different PF ID.",
-          };
-        case "esicId":
-          return {
-            success: false,
-            message: "ESIC ID already exists for another employee. Please use a different ESIC ID.",
-          };
-        case "panNumber":
-          return {
-            success: false,
-            message: "PAN number already exists for another employee. Please use a different PAN number.",
-          };
-        default:
-          return {
-            success: false,
-            message: "A unique constraint was violated. Please check your input.",
-          };
-      }
+      const messages: Record<string, string> = {
+        aadhaarNumber:
+          "Aadhaar number already exists for another employee.",
+        pfId:
+          "PF ID already exists for another employee.",
+        esicId:
+          "ESIC ID already exists for another employee.",
+        panNumber:
+          "PAN number already exists for another employee.",
+        bankAccountNumber:
+          "Bank account number already exists for another employee.",
+      };
+
+      return {
+        success: false,
+        message:
+          messages[field] ||
+          "A unique constraint was violated. Please check your input.",
+      };
     }
 
-    return { success: false, message: error.message || "Failed to update employee" };
+    return {
+      success: false,
+      message: error.message || "Failed to update employee",
+    };
   }
 }
 

@@ -164,82 +164,73 @@ export default function CombinedEmployeeDashboard() {
   /* ============================
      LOAD DASHBOARD
   ============================ */
-  const loadDashboard = async (
-    month: number,
-    year: number,
-    cycleId: string,
-    searchField: string,
-    searchValue: string
-  ) => {
-    const reqId = ++requestIdRef.current;
-    setLoading(true);
+const loadDashboard = async (
+  month: number,
+  year: number,
+  cycleId: string,
+  searchField: string,
+  searchValue: string
+) => {
+  const reqId = ++requestIdRef.current;
+  setLoading(true);
 
-    try {
-      const monthEnd = getMonthEnd(year, month);
-      let result: Row[] = [];
+  try {
+    const monthEnd = getMonthEnd(year, month);
 
-      if (cycleId === "all") {
-        const responses = await Promise.all(
-          cycles.map((c) =>
-            getMonthlySummaries({
-              year,
-              month,
-              cycleTimingId: c.id,
-            })
-          )
-        );
+    // 1️⃣ Fetch summaries FIRST
+    let summaries: any[] = [];
 
-        const flat = responses.flat();
-        result = flat.filter(
-          (r) => new Date(r.employee.joinedAt) <= monthEnd
-        );
-
-        const map = new Map<string, Row>();
-        for (const r of result) {
-          const key = `${r.employee.id}-${r.summary?.cycleStart ?? "none"}`;
-          map.set(key, r);
-        }
-        result = Array.from(map.values());
-      } else {
-        const data = await getMonthlySummaries({
-          year,
-          month,
-          cycleTimingId: cycleId,
-        });
-
-        result = data.filter(
-          (r) => new Date(r.employee.joinedAt) <= monthEnd
-        );
-      }
-
-      // Apply employee search filter
-      if (searchValue.trim()) {
-        const value = searchValue.toLowerCase().trim();
-        result = result.filter(({ employee }) => {
-          switch (searchField) {
-            case "name":
-            case "empCode":
-            case "pfId":
-            case "esicId":
-            case "aadhaarNumber":
-            case "mobile":
-            case "bankAccountNumber":
-            case "ifscCode":
-            case "panNumber":
-              return String(employee[searchField] || "")
-                .toLowerCase()
-                .includes(value);
-            default:
-              return true;
-          }
-        });
-      }
-
-      if (reqId === requestIdRef.current) setRows(result);
-    } finally {
-      if (reqId === requestIdRef.current) setLoading(false);
+    if (cycleId === "all") {
+      const responses = await Promise.all(
+        cycles.map((c) =>
+          getMonthlySummaries({
+            year,
+            month,
+            cycleTimingId: c.id,
+          })
+        )
+      );
+      summaries = responses.flat();
+    } else {
+      summaries = await getMonthlySummaries({
+        year,
+        month,
+        cycleTimingId: cycleId,
+      });
     }
-  };
+
+    // 2️⃣ Map summaries by employeeId
+    const summaryMap = new Map<string, any>();
+    summaries.forEach((r) => {
+      summaryMap.set(r.employee.id, r.summary);
+    });
+
+    // 3️⃣ LEFT JOIN: ALL employees + summary|null
+    let result: Row[] = employees
+      .filter((e) => new Date(e.joinedAt) <= monthEnd)
+      .map((emp) => ({
+        employee: emp,
+        summary: summaryMap.get(emp.id) || null,
+      }));
+
+    // 4️⃣ Search filter
+    if (searchValue.trim()) {
+      const value = searchValue.toLowerCase().trim();
+      result = result.filter(({ employee }) =>
+        String(employee[searchField] || "")
+          .toLowerCase()
+          .includes(value)
+      );
+    }
+
+    if (reqId === requestIdRef.current) {
+      setRows(result);
+    }
+  } finally {
+    if (reqId === requestIdRef.current) setLoading(false);
+  }
+};
+
 
   useEffect(() => {
     if (!appliedFilters || cycles.length === 0 || initialLoading) return;
