@@ -584,7 +584,7 @@ export default function CombinedEmployeeDashboard() {
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   {columnVisibility.name && (
-                    <th className="w-[180px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                    <th className="w-[180px] px-4 py-3 text-left text-xs font-semibold text-gray-900 uppercase whitespace-nowrap">
                       Name
                     </th>
                   )}
@@ -608,49 +608,49 @@ export default function CombinedEmployeeDashboard() {
                   )}
 
                   {columnVisibility.pfPerDay && (
-                    <th className="w-[90px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                    <th className="w-[90px] px-4 py-3 text-left text-xs font-semibold text-gray-900 uppercase whitespace-nowrap">
                       PF/Day
                     </th>
                   )}
 
                   {columnVisibility.esicId && (
-                    <th className="w-[130px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                    <th className="w-[130px] px-4 py-3 text-left text-xs font-semibold text-gray-900 uppercase whitespace-nowrap">
                       ESIC ID
                     </th>
                   )}
 
                   {columnVisibility.aadhaar && (
-                    <th className="w-[140px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                    <th className="w-[140px] px-4 py-3 text-left text-xs font-semibold text-gray-900 uppercase whitespace-nowrap">
                       Aadhaar
                     </th>
                   )}
 
                   {columnVisibility.bankAccount && (
-                    <th className="w-[160px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                    <th className="w-[160px] px-4 py-3 text-left text-xs font-semibold text-gray-900 uppercase whitespace-nowrap">
                       Bank Account
                     </th>
                   )}
 
                   {columnVisibility.ifscCode && (
-                    <th className="w-[110px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                    <th className="w-[110px] px-4 py-3 text-left text-xs font-semibold text-gray-900 uppercase whitespace-nowrap">
                       IFSC
                     </th>
                   )}
 
                   {columnVisibility.panNumber && (
-                    <th className="w-[120px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                    <th className="w-[120px] px-4 py-3 text-left text-xs font-semibold text-gray-900 uppercase whitespace-nowrap">
                       PAN
                     </th>
                   )}
 
                   {columnVisibility.rate && (
-                    <th className="w-[90px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                    <th className="w-[90px] px-4 py-3 text-left text-xs font-semibold text-gray-900 uppercase whitespace-nowrap">
                       Rate
                     </th>
                   )}
 
                   {columnVisibility.joinedAt && (
-                    <th className="w-[110px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                    <th className="w-[110px] px-4 py-3 text-left text-xs font-semibold text-gray-900 uppercase whitespace-nowrap">
                       Joined At
                     </th>
                   )}
@@ -674,7 +674,7 @@ export default function CombinedEmployeeDashboard() {
                   )}
 
                   {columnVisibility.totalHrs && (
-                    <th className="w-[90px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                    <th className="w-[90px] px-4 py-3 text-left text-xs font-semibold text-gray-900 uppercase whitespace-nowrap">
                       Total Hrs
                     </th>
                   )}
@@ -692,13 +692,13 @@ export default function CombinedEmployeeDashboard() {
                   )}
 
                   {columnVisibility.deductions && (
-                    <th className="w-[110px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                    <th className="w-[110px] px-4 py-3 text-left text-xs font-semibold text-gray-900 uppercase whitespace-nowrap">
                       Deductions
                     </th>
                   )}
 
                   {columnVisibility.netSalary && (
-                    <th className="w-[130px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                    <th className="w-[130px] px-4 py-3 text-left text-xs font-semibold text-gray-900 uppercase whitespace-nowrap">
                       Net Salary
                     </th>
                   )}
@@ -744,7 +744,7 @@ export default function CombinedEmployeeDashboard() {
                     return (
                       <tr
                         key={`${employee.id}-${summary?.cycleStart || "no-summary"}`}
-                        className="bg-white hover:bg-gray-50 transition-colors"
+                        className="bg-white hover:bg-gray-100 transition-colors cursor-pointer"
                       >
                         {columnVisibility.name && (
                           <td className="w-[180px] px-4 py-3 whitespace-nowrap truncate font-medium text-gray-900">
@@ -753,25 +753,25 @@ export default function CombinedEmployeeDashboard() {
                         )}
 
                         {columnVisibility.empCode && (
-                          <td className="w-[120px] px-4 py-3 whitespace-nowrap truncate text-gray-600">
+                          <td className="w-[120px] px-4 py-3 whitespace-nowrap truncate text-gray-900">
                             {employee.empCode}
                           </td>
                         )}
 
                         {columnVisibility.mobile && (
-                          <td className="w-[120px] px-4 py-3 whitespace-nowrap text-gray-600">
+                          <td className="w-[120px] px-4 py-3 whitespace-nowrap text-gray-900">
                             {employee.mobile}
                           </td>
                         )}
 
                         {columnVisibility.pfId && (
-                          <td className="w-[130px] px-4 py-3 whitespace-nowrap text-gray-600">
+                          <td className="w-[130px] px-4 py-3 whitespace-nowrap text-gray-900">
                             {employee.pfId || "-"}
                           </td>
                         )}
 
                         {columnVisibility.pfPerDay && (
-                          <td className="w-[90px] px-4 py-3 whitespace-nowrap text-gray-600">
+                          <td className="w-[90px] px-4 py-3 whitespace-nowrap text-gray-900">
                             {employee.pfActive && employee.pfAmountPerDay
                               ? `₹${employee.pfAmountPerDay}`
                               : "-"}
@@ -779,31 +779,31 @@ export default function CombinedEmployeeDashboard() {
                         )}
 
                         {columnVisibility.esicId && (
-                          <td className="w-[130px] px-4 py-3 whitespace-nowrap text-gray-600">
+                          <td className="w-[130px] px-4 py-3 whitespace-nowrap text-gray-900">
                             {employee.esicId || "-"}
                           </td>
                         )}
 
                         {columnVisibility.aadhaar && (
-                          <td className="w-[140px] px-4 py-3 whitespace-nowrap truncate text-gray-600">
+                          <td className="w-[140px] px-4 py-3 whitespace-nowrap truncate text-gray-900">
                             {employee.aadhaarNumber || "-"}
                           </td>
                         )}
 
                         {columnVisibility.bankAccount && (
-                          <td className="w-[160px] px-4 py-3 whitespace-nowrap truncate text-gray-600">
+                          <td className="w-[160px] px-4 py-3 whitespace-nowrap truncate text-gray-900">
                             {employee.bankAccountNumber || "-"}
                           </td>
                         )}
 
                         {columnVisibility.ifscCode && (
-                          <td className="w-[110px] px-4 py-3 whitespace-nowrap text-gray-600">
+                          <td className="w-[110px] px-4 py-3 whitespace-nowrap text-gray-900">
                             {employee.ifscCode || "-"}
                           </td>
                         )}
 
                         {columnVisibility.panNumber && (
-                          <td className="w-[120px] px-4 py-3 whitespace-nowrap text-gray-600">
+                          <td className="w-[120px] px-4 py-3 whitespace-nowrap text-gray-900">
                             {employee.panNumber || "-"}
                           </td>
                         )}
@@ -821,7 +821,7 @@ export default function CombinedEmployeeDashboard() {
                         )}
 
                         {columnVisibility.cycle && (
-                          <td className="w-[200px] px-4 py-3 text-gray-600">
+                          <td className="w-[200px] px-4 py-3 text-gray-900">
                             <div className="font-medium whitespace-nowrap truncate">
                               {cycle?.name}
                             </div>

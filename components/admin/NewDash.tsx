@@ -252,7 +252,7 @@ export default function AdminAttendanceDashboardV2() {
         <table className="min-w-[1600px] w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Name</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">Name</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">PF ID</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">PF/Day</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Cycle</th>
@@ -285,9 +285,9 @@ export default function AdminAttendanceDashboardV2() {
                 const cycle = getCycleById(employee.cycleTimingId);
 
                 return (
-                  <tr key={employee.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={employee.id} className="bg-white hover:bg-gray-100 transition-colors cursor-pointer">
                     <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{employee.name}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{employee.pfId || "-"}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{employee.pfId || "-"}</td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                       {employee.pfActive && employee.pfAmountPerDay ? `₹${employee.pfAmountPerDay}` : "-"}
                     </td>
