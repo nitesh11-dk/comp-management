@@ -8,15 +8,15 @@ import prisma from "@/lib/prisma";
 type LoginResponse =
   | { success: false; message: string }
   | {
-      success: true;
-      message: string;
-      user: {
-        id: string;
-        username: string;
-        role: "admin" | "supervisor" | "user";
-        departmentId: string | null;
-      };
+    success: true;
+    message: string;
+    user: {
+      id: string;
+      username: string;
+      role: "admin" | "supervisor" | "user";
+      departmentId: string | null;
     };
+  };
 
 export async function loginUser(
   formData: FormData

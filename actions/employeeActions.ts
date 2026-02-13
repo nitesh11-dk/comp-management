@@ -200,11 +200,13 @@ export async function getEmployeeById(
   id: string
 ): Promise<ActionResponse<any>> {
   try {
-    const emp = await prisma.employee.findUnique({ where: { id },include: {
-    department: true,
-    shiftType: true,
-    cycleTiming: true,
-  }, });
+    const emp = await prisma.employee.findUnique({
+      where: { id }, include: {
+        department: true,
+        shiftType: true,
+        cycleTiming: true,
+      },
+    });
     if (!emp) return { success: false, message: "Employee not found" };
 
     return { success: true, data: serializeEmployee(emp) };
@@ -354,7 +356,7 @@ export async function deleteEmployee(
   id: string
 ): Promise<ActionResponse> {
   try {
-    
+
     await prisma.employee.delete({ where: { id } });
     return { success: true, message: "Employee and all related data deleted successfully" };
   } catch (error: any) {

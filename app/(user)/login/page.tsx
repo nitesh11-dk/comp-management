@@ -27,17 +27,17 @@ export default function LoginPage() {
           autoClose: 2000,
         });
 
-      
-      
+
+
         if (res.success) {
-  if (res.user.role === "admin") {
-    router.push("/admin/dashboard");
-  } else if (res.user.role === "supervisor") {
-    router.push("/dashboard");
-  } else {
-    router.push("/");
-  }
-}
+          if (res.user.role === "admin") {
+            router.push("/admin/dashboard");
+          } else if (res.user.role === "supervisor") {
+            router.push("/dashboard");
+          } else {
+            router.push("/");
+          }
+        }
 
       } else {
         // show server-provided error message

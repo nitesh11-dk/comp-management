@@ -9,12 +9,14 @@ import {
   calculateMonthlyForAllEmployees,
   calculateMonthlyForEmployee,
 } from "@/actions/monthlyAttendance";
+import { getGlobalSettings, updateGlobalSettings } from "@/actions/userSettings";
 import { Button } from "@/components/ui/button";
 import { Download, Eye, Edit, Calculator, Filter, Settings } from "lucide-react";
 import Barcode from "react-barcode";
 import html2canvas from "html2canvas";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -148,6 +150,38 @@ export default function CombinedEmployeeDashboard() {
   }, []);
 
   /* ============================
+     GLOBAL UI SETTINGS
+  ============================ */
+  const [savingSettings, setSavingSettings] = useState(false);
+
+  useEffect(() => {
+    const fetchGlobalSettings = async () => {
+      const res = await getGlobalSettings();
+      if (res.success && res.data && res.data.columnVisibility) {
+        setColumnVisibility((prev) => ({
+          ...prev,
+          ...res.data.columnVisibility,
+        }));
+      }
+    };
+    fetchGlobalSettings();
+  }, []);
+
+  const saveAsDefaults = async () => {
+    setSavingSettings(true);
+    try {
+      const res = await updateGlobalSettings(columnVisibility);
+      if (res.success) {
+        toast.success("Global column visibility updated successfully!");
+      }
+    } catch (err) {
+      console.error("Failed to save defaults:", err);
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  /* ============================
      SEARCH & FILTER
   ============================ */
   const onSearch = () => {
@@ -164,72 +198,72 @@ export default function CombinedEmployeeDashboard() {
   /* ============================
      LOAD DASHBOARD
   ============================ */
-const loadDashboard = async (
-  month: number,
-  year: number,
-  cycleId: string,
-  searchField: string,
-  searchValue: string
-) => {
-  const reqId = ++requestIdRef.current;
-  setLoading(true);
+  const loadDashboard = async (
+    month: number,
+    year: number,
+    cycleId: string,
+    searchField: string,
+    searchValue: string
+  ) => {
+    const reqId = ++requestIdRef.current;
+    setLoading(true);
 
-  try {
-    const monthEnd = getMonthEnd(year, month);
+    try {
+      const monthEnd = getMonthEnd(year, month);
 
-    // 1️⃣ Fetch summaries FIRST
-    let summaries: any[] = [];
+      // 1️⃣ Fetch summaries FIRST
+      let summaries: any[] = [];
 
-    if (cycleId === "all") {
-      const responses = await Promise.all(
-        cycles.map((c) =>
-          getMonthlySummaries({
-            year,
-            month,
-            cycleTimingId: c.id,
-          })
-        )
-      );
-      summaries = responses.flat();
-    } else {
-      summaries = await getMonthlySummaries({
-        year,
-        month,
-        cycleTimingId: cycleId,
+      if (cycleId === "all") {
+        const responses = await Promise.all(
+          cycles.map((c) =>
+            getMonthlySummaries({
+              year,
+              month,
+              cycleTimingId: c.id,
+            })
+          )
+        );
+        summaries = responses.flat();
+      } else {
+        summaries = await getMonthlySummaries({
+          year,
+          month,
+          cycleTimingId: cycleId,
+        });
+      }
+
+      // 2️⃣ Map summaries by employeeId
+      const summaryMap = new Map<string, any>();
+      summaries.forEach((r) => {
+        summaryMap.set(r.employee.id, r.summary);
       });
+
+      // 3️⃣ LEFT JOIN: ALL employees + summary|null
+      let result: Row[] = employees
+        .filter((e) => new Date(e.joinedAt) <= monthEnd)
+        .map((emp) => ({
+          employee: emp,
+          summary: summaryMap.get(emp.id) || null,
+        }));
+
+      // 4️⃣ Search filter
+      if (searchValue.trim()) {
+        const value = searchValue.toLowerCase().trim();
+        result = result.filter(({ employee }) =>
+          String(employee[searchField] || "")
+            .toLowerCase()
+            .includes(value)
+        );
+      }
+
+      if (reqId === requestIdRef.current) {
+        setRows(result);
+      }
+    } finally {
+      if (reqId === requestIdRef.current) setLoading(false);
     }
-
-    // 2️⃣ Map summaries by employeeId
-    const summaryMap = new Map<string, any>();
-    summaries.forEach((r) => {
-      summaryMap.set(r.employee.id, r.summary);
-    });
-
-    // 3️⃣ LEFT JOIN: ALL employees + summary|null
-    let result: Row[] = employees
-      .filter((e) => new Date(e.joinedAt) <= monthEnd)
-      .map((emp) => ({
-        employee: emp,
-        summary: summaryMap.get(emp.id) || null,
-      }));
-
-    // 4️⃣ Search filter
-    if (searchValue.trim()) {
-      const value = searchValue.toLowerCase().trim();
-      result = result.filter(({ employee }) =>
-        String(employee[searchField] || "")
-          .toLowerCase()
-          .includes(value)
-      );
-    }
-
-    if (reqId === requestIdRef.current) {
-      setRows(result);
-    }
-  } finally {
-    if (reqId === requestIdRef.current) setLoading(false);
-  }
-};
+  };
 
 
   useEffect(() => {
@@ -329,6 +363,32 @@ const loadDashboard = async (
   };
 
   /* ============================
+     TABLE SCROLLING (DRAG TO SCROLL)
+  ============================ */
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!scrollRef.current) return;
+    setIsDragging(true);
+    setStartX(e.pageX - scrollRef.current.offsetLeft);
+    setScrollLeft(scrollRef.current.scrollLeft);
+  };
+
+  const handleMouseLeave = () => setIsDragging(false);
+  const handleMouseUp = () => setIsDragging(false);
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !scrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - scrollRef.current.offsetLeft;
+    const walk = (x - startX) * 2; // Scroll speed
+    scrollRef.current.scrollLeft = scrollLeft - walk;
+  };
+
+  /* ============================
      RENDER
   ============================ */
   if (initialLoading) {
@@ -409,8 +469,8 @@ const loadDashboard = async (
               </Select>
             </div>
 
-            
-             <div className="flex items-end">
+
+            <div className="flex items-end">
               <Button variant="outline" disabled={isBusy || !appliedFilters} onClick={recalcAll} className="w-full">
                 {recalcLoading === "ALL" ? (
                   <>
@@ -458,8 +518,8 @@ const loadDashboard = async (
               />
             </div>
 
-           
-             <div className="flex items-end">
+
+            <div className="flex items-end">
               <Button disabled={isBusy} onClick={onSearch} className="w-full">
                 <Calculator className="h-4 w-4 mr-2" />
                 Load Data
@@ -469,13 +529,22 @@ const loadDashboard = async (
         </CardContent>
       </Card>
 
+
       {/* COLUMN VISIBILITY SETTINGS */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
             Column Visibility
           </CardTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={savingSettings}
+            onClick={saveAsDefaults}
+          >
+            {savingSettings ? "Saving..." : "Set as Global Defaults"}
+          </Button>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
@@ -490,9 +559,9 @@ const loadDashboard = async (
                 />
                 <Label htmlFor={key} className="text-sm capitalize">
                   {key === 'pfPerDay' ? 'PF/Day' :
-                   key === 'totalHrs' ? 'Total Hrs' :
-                   key === 'netSalary' ? 'Net Salary' :
-                   key.replace(/([A-Z])/g, ' $1').trim()}
+                    key === 'totalHrs' ? 'Total Hrs' :
+                      key === 'netSalary' ? 'Net Salary' :
+                        key.replace(/([A-Z])/g, ' $1').trim()}
                 </Label>
               </div>
             ))}
@@ -503,345 +572,350 @@ const loadDashboard = async (
       {/* TABLE */}
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full table-fixed text-sm">
-
-             <thead className="bg-gray-50 border-b border-gray-200">
-  <tr>
-    {columnVisibility.name && (
-      <th className="w-[180px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
-        Name
-      </th>
-    )}
-
-    {columnVisibility.empCode && (
-      <th className="w-[120px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
-        Emp Code
-      </th>
-    )}
-
-    {columnVisibility.mobile && (
-      <th className="w-[120px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
-        Mobile
-      </th>
-    )}
-
-    {columnVisibility.pfId && (
-      <th className="w-[130px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
-        PF ID
-      </th>
-    )}
-
-    {columnVisibility.pfPerDay && (
-      <th className="w-[90px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
-        PF/Day
-      </th>
-    )}
-
-    {columnVisibility.esicId && (
-      <th className="w-[130px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
-        ESIC ID
-      </th>
-    )}
-
-    {columnVisibility.aadhaar && (
-      <th className="w-[140px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
-        Aadhaar
-      </th>
-    )}
-
-    {columnVisibility.bankAccount && (
-      <th className="w-[160px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
-        Bank Account
-      </th>
-    )}
-
-    {columnVisibility.ifscCode && (
-      <th className="w-[110px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
-        IFSC
-      </th>
-    )}
-
-    {columnVisibility.panNumber && (
-      <th className="w-[120px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
-        PAN
-      </th>
-    )}
-
-    {columnVisibility.rate && (
-      <th className="w-[90px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
-        Rate
-      </th>
-    )}
-
-    {columnVisibility.joinedAt && (
-      <th className="w-[110px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
-        Joined At
-      </th>
-    )}
-
-    {columnVisibility.cycle && (
-      <th className="w-[200px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
-        Cycle
-      </th>
-    )}
-
-    {columnVisibility.present && (
-      <th className="w-[80px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
-        Present
-      </th>
-    )}
-
-    {columnVisibility.absent && (
-      <th className="w-[80px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
-        Absent
-      </th>
-    )}
-
-    {columnVisibility.totalHrs && (
-      <th className="w-[90px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
-        Total Hrs
-      </th>
-    )}
-
-    {columnVisibility.ot && (
-      <th className="w-[70px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
-        OT
-      </th>
-    )}
-
-    {columnVisibility.advance && (
-      <th className="w-[100px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
-        Advance
-      </th>
-    )}
-
-    {columnVisibility.deductions && (
-      <th className="w-[110px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
-        Deductions
-      </th>
-    )}
-
-    {columnVisibility.netSalary && (
-      <th className="w-[130px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
-        Net Salary
-      </th>
-    )}
-
-    {columnVisibility.actions && (
-      <th className="w-[200px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
-        Actions
-      </th>
-    )}
-  </tr>
-</thead>
-
-
-             <tbody className="bg-white divide-y divide-gray-200">
-  {loading && (
-    <tr>
-      <td
-        colSpan={Object.values(columnVisibility).filter(Boolean).length}
-        className="px-4 py-8 text-center text-gray-500"
-      >
-        <div className="flex items-center justify-center">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mr-2"></div>
-          Loading data...
-        </div>
-      </td>
-    </tr>
-  )}
-
-  {!loading && rows.length === 0 && appliedFilters && (
-    <tr>
-      <td
-        colSpan={Object.values(columnVisibility).filter(Boolean).length}
-        className="px-4 py-8 text-center text-gray-500"
-      >
-        No employees found matching the criteria
-      </td>
-    </tr>
-  )}
-
-  {!loading &&
-    rows.map(({ employee, summary }) => {
-      const cycle = getCycleById(employee.cycleTimingId);
-
-      return (
-        <tr
-          key={`${employee.id}-${summary?.cycleStart || "no-summary"}`}
-          className="hover:bg-gray-50 transition-colors"
-        >
-          {columnVisibility.name && (
-            <td className="w-[180px] px-4 py-3 whitespace-nowrap truncate font-medium text-gray-900">
-              {employee.name}
-            </td>
-          )}
-
-          {columnVisibility.empCode && (
-            <td className="w-[120px] px-4 py-3 whitespace-nowrap truncate text-gray-600">
-              {employee.empCode}
-            </td>
-          )}
-
-          {columnVisibility.mobile && (
-            <td className="w-[120px] px-4 py-3 whitespace-nowrap text-gray-600">
-              {employee.mobile}
-            </td>
-          )}
-
-          {columnVisibility.pfId && (
-            <td className="w-[130px] px-4 py-3 whitespace-nowrap text-gray-600">
-              {employee.pfId || "-"}
-            </td>
-          )}
-
-          {columnVisibility.pfPerDay && (
-            <td className="w-[90px] px-4 py-3 whitespace-nowrap text-gray-600">
-              {employee.pfActive && employee.pfAmountPerDay
-                ? `₹${employee.pfAmountPerDay}`
-                : "-"}
-            </td>
-          )}
-
-          {columnVisibility.esicId && (
-            <td className="w-[130px] px-4 py-3 whitespace-nowrap text-gray-600">
-              {employee.esicId || "-"}
-            </td>
-          )}
-
-          {columnVisibility.aadhaar && (
-            <td className="w-[140px] px-4 py-3 whitespace-nowrap truncate text-gray-600">
-              {employee.aadhaarNumber || "-"}
-            </td>
-          )}
-
-          {columnVisibility.bankAccount && (
-            <td className="w-[160px] px-4 py-3 whitespace-nowrap truncate text-gray-600">
-              {employee.bankAccountNumber || "-"}
-            </td>
-          )}
-
-          {columnVisibility.ifscCode && (
-            <td className="w-[110px] px-4 py-3 whitespace-nowrap text-gray-600">
-              {employee.ifscCode || "-"}
-            </td>
-          )}
-
-          {columnVisibility.panNumber && (
-            <td className="w-[120px] px-4 py-3 whitespace-nowrap text-gray-600">
-              {employee.panNumber || "-"}
-            </td>
-          )}
-
-          {columnVisibility.rate && (
-            <td className="w-[90px] px-4 py-3 whitespace-nowrap text-gray-900">
-              ₹{employee.hourlyRate}
-            </td>
-          )}
-
-          {columnVisibility.joinedAt && (
-            <td className="w-[110px] px-4 py-3 whitespace-nowrap text-gray-900">
-              {format(new Date(employee.joinedAt), "dd MMM yyyy")}
-            </td>
-          )}
-
-          {columnVisibility.cycle && (
-            <td className="w-[200px] px-4 py-3 text-gray-600">
-              <div className="font-medium whitespace-nowrap truncate">
-                {cycle?.name}
-              </div>
-              {summary && (
-                <div className="text-xs text-gray-500 mt-1 whitespace-nowrap">
-                  {format(new Date(summary.cycleStart), "dd MMM yyyy")} →{" "}
-                  {format(new Date(summary.cycleEnd), "dd MMM yyyy")}
-                </div>
-              )}
-            </td>
-          )}
-
-          {summary ? (
-            <>
-              {columnVisibility.present && (
-                <td className="w-[80px] px-4 py-3 whitespace-nowrap text-gray-900">
-                  {summary.daysPresent}
-                </td>
-              )}
-
-              {columnVisibility.absent && (
-                <td className="w-[80px] px-4 py-3 whitespace-nowrap text-gray-900">
-                  {summary.daysAbsent}
-                </td>
-              )}
-
-              {columnVisibility.totalHrs && (
-                <td className="w-[90px] px-4 py-3 whitespace-nowrap text-gray-900">
-                  {summary.totalHours?.toFixed(2)}
-                </td>
-              )}
-
-              {columnVisibility.ot && (
-                <td className="w-[70px] px-4 py-3 whitespace-nowrap text-gray-900">
-                  {summary.overtimeHours?.toFixed(2)}
-                </td>
-              )}
-
-              {columnVisibility.advance && (
-                <td className="w-[100px] px-4 py-3 whitespace-nowrap text-gray-900">
-                  ₹{summary.advanceAmount}
-                </td>
-              )}
-
-              {columnVisibility.deductions && (
-                <td className="w-[110px] px-4 py-3 whitespace-nowrap text-gray-900">
-                  ₹
-                  {Object.values(summary.deductions || {}).reduce(
-                    (a: number, b: any) => a + Number(b || 0),
-                    0
+          <div
+            ref={scrollRef}
+            className="overflow-x-auto cursor-grab active:cursor-grabbing select-none"
+            onMouseDown={handleMouseDown}
+            onMouseLeave={handleMouseLeave}
+            onMouseUp={handleMouseUp}
+            onMouseMove={handleMouseMove}
+          >
+            <table className="min-w-full table-fixed text-sm border-collapse">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  {columnVisibility.name && (
+                    <th className="w-[180px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                      Name
+                    </th>
                   )}
-                </td>
-              )}
 
-              {columnVisibility.netSalary && (
-                <td className="w-[130px] px-4 py-3 whitespace-nowrap font-semibold text-green-600">
-                  ₹{summary.netSalary?.toFixed(2)}
-                </td>
-              )}
-            </>
-          ) : (
-           <>
-    {columnVisibility.present && (
-      <td className="w-[80px] px-4 py-3 text-center text-gray-400">—</td>
-    )}
-    {columnVisibility.absent && (
-      <td className="w-[80px] px-4 py-3 text-center text-gray-400">—</td>
-    )}
-    {columnVisibility.totalHrs && (
-      <td className="w-[90px] px-4 py-3 text-center text-gray-400">—</td>
-    )}
-    {columnVisibility.ot && (
-      <td className="w-[70px] px-4 py-3 text-center text-gray-400">—</td>
-    )}
-    {columnVisibility.advance && (
-      <td className="w-[100px] px-4 py-3 text-center text-gray-400">₹0</td>
-    )}
-    {columnVisibility.deductions && (
-      <td className="w-[110px] px-4 py-3 text-center text-gray-400">₹0</td>
-    )}
-    {columnVisibility.netSalary && (
-      <td className="w-[130px] px-4 py-3 text-center text-gray-400">
-        Not calculated
-      </td>
-    )}
-  </>
-          )}
+                  {columnVisibility.empCode && (
+                    <th className="w-[120px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                      Emp Code
+                    </th>
+                  )}
 
-              {columnVisibility.actions && (
-                          <td className="px-4 py-3 whitespace-nowrap">
+                  {columnVisibility.mobile && (
+                    <th className="w-[120px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                      Mobile
+                    </th>
+                  )}
+
+                  {columnVisibility.pfId && (
+                    <th className="w-[130px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                      PF ID
+                    </th>
+                  )}
+
+                  {columnVisibility.pfPerDay && (
+                    <th className="w-[90px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                      PF/Day
+                    </th>
+                  )}
+
+                  {columnVisibility.esicId && (
+                    <th className="w-[130px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                      ESIC ID
+                    </th>
+                  )}
+
+                  {columnVisibility.aadhaar && (
+                    <th className="w-[140px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                      Aadhaar
+                    </th>
+                  )}
+
+                  {columnVisibility.bankAccount && (
+                    <th className="w-[160px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                      Bank Account
+                    </th>
+                  )}
+
+                  {columnVisibility.ifscCode && (
+                    <th className="w-[110px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                      IFSC
+                    </th>
+                  )}
+
+                  {columnVisibility.panNumber && (
+                    <th className="w-[120px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                      PAN
+                    </th>
+                  )}
+
+                  {columnVisibility.rate && (
+                    <th className="w-[90px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                      Rate
+                    </th>
+                  )}
+
+                  {columnVisibility.joinedAt && (
+                    <th className="w-[110px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                      Joined At
+                    </th>
+                  )}
+
+                  {columnVisibility.cycle && (
+                    <th className="w-[200px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                      Cycle
+                    </th>
+                  )}
+
+                  {columnVisibility.present && (
+                    <th className="w-[80px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                      Present
+                    </th>
+                  )}
+
+                  {columnVisibility.absent && (
+                    <th className="w-[80px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                      Absent
+                    </th>
+                  )}
+
+                  {columnVisibility.totalHrs && (
+                    <th className="w-[90px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                      Total Hrs
+                    </th>
+                  )}
+
+                  {columnVisibility.ot && (
+                    <th className="w-[70px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                      OT
+                    </th>
+                  )}
+
+                  {columnVisibility.advance && (
+                    <th className="w-[100px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                      Advance
+                    </th>
+                  )}
+
+                  {columnVisibility.deductions && (
+                    <th className="w-[110px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                      Deductions
+                    </th>
+                  )}
+
+                  {columnVisibility.netSalary && (
+                    <th className="w-[130px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                      Net Salary
+                    </th>
+                  )}
+
+                  {columnVisibility.actions && (
+                    <th className="w-[280px] px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">
+                      Actions
+                    </th>
+                  )}
+                </tr>
+              </thead>
+
+              <tbody className="bg-white divide-y divide-gray-200">
+                {loading && (
+                  <tr>
+                    <td
+                      colSpan={Object.values(columnVisibility).filter(Boolean).length}
+                      className="px-4 py-8 text-center text-gray-500"
+                    >
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mr-2"></div>
+                        Loading data...
+                      </div>
+                    </td>
+                  </tr>
+                )}
+
+                {!loading && rows.length === 0 && appliedFilters && (
+                  <tr>
+                    <td
+                      colSpan={Object.values(columnVisibility).filter(Boolean).length}
+                      className="px-4 py-8 text-center text-gray-500"
+                    >
+                      No employees found matching the criteria
+                    </td>
+                  </tr>
+                )}
+
+                {!loading &&
+                  rows.map(({ employee, summary }) => {
+                    const cycle = getCycleById(employee.cycleTimingId);
+
+                    return (
+                      <tr
+                        key={`${employee.id}-${summary?.cycleStart || "no-summary"}`}
+                        className="bg-white hover:bg-gray-50 transition-colors"
+                      >
+                        {columnVisibility.name && (
+                          <td className="w-[180px] px-4 py-3 whitespace-nowrap truncate font-medium text-gray-900">
+                            {employee.name}
+                          </td>
+                        )}
+
+                        {columnVisibility.empCode && (
+                          <td className="w-[120px] px-4 py-3 whitespace-nowrap truncate text-gray-600">
+                            {employee.empCode}
+                          </td>
+                        )}
+
+                        {columnVisibility.mobile && (
+                          <td className="w-[120px] px-4 py-3 whitespace-nowrap text-gray-600">
+                            {employee.mobile}
+                          </td>
+                        )}
+
+                        {columnVisibility.pfId && (
+                          <td className="w-[130px] px-4 py-3 whitespace-nowrap text-gray-600">
+                            {employee.pfId || "-"}
+                          </td>
+                        )}
+
+                        {columnVisibility.pfPerDay && (
+                          <td className="w-[90px] px-4 py-3 whitespace-nowrap text-gray-600">
+                            {employee.pfActive && employee.pfAmountPerDay
+                              ? `₹${employee.pfAmountPerDay}`
+                              : "-"}
+                          </td>
+                        )}
+
+                        {columnVisibility.esicId && (
+                          <td className="w-[130px] px-4 py-3 whitespace-nowrap text-gray-600">
+                            {employee.esicId || "-"}
+                          </td>
+                        )}
+
+                        {columnVisibility.aadhaar && (
+                          <td className="w-[140px] px-4 py-3 whitespace-nowrap truncate text-gray-600">
+                            {employee.aadhaarNumber || "-"}
+                          </td>
+                        )}
+
+                        {columnVisibility.bankAccount && (
+                          <td className="w-[160px] px-4 py-3 whitespace-nowrap truncate text-gray-600">
+                            {employee.bankAccountNumber || "-"}
+                          </td>
+                        )}
+
+                        {columnVisibility.ifscCode && (
+                          <td className="w-[110px] px-4 py-3 whitespace-nowrap text-gray-600">
+                            {employee.ifscCode || "-"}
+                          </td>
+                        )}
+
+                        {columnVisibility.panNumber && (
+                          <td className="w-[120px] px-4 py-3 whitespace-nowrap text-gray-600">
+                            {employee.panNumber || "-"}
+                          </td>
+                        )}
+
+                        {columnVisibility.rate && (
+                          <td className="w-[90px] px-4 py-3 whitespace-nowrap text-gray-900">
+                            ₹{employee.hourlyRate}
+                          </td>
+                        )}
+
+                        {columnVisibility.joinedAt && (
+                          <td className="w-[110px] px-4 py-3 whitespace-nowrap text-gray-900">
+                            {format(new Date(employee.joinedAt), "dd MMM yyyy")}
+                          </td>
+                        )}
+
+                        {columnVisibility.cycle && (
+                          <td className="w-[200px] px-4 py-3 text-gray-600">
+                            <div className="font-medium whitespace-nowrap truncate">
+                              {cycle?.name}
+                            </div>
+                            {summary && (
+                              <div className="text-xs text-gray-500 mt-1 whitespace-nowrap">
+                                {format(new Date(summary.cycleStart), "dd MMM yyyy")} →{" "}
+                                {format(new Date(summary.cycleEnd), "dd MMM yyyy")}
+                              </div>
+                            )}
+                          </td>
+                        )}
+
+                        {summary ? (
+                          <>
+                            {columnVisibility.present && (
+                              <td className="w-[80px] px-4 py-3 whitespace-nowrap text-gray-900">
+                                {summary.daysPresent}
+                              </td>
+                            )}
+
+                            {columnVisibility.absent && (
+                              <td className="w-[80px] px-4 py-3 whitespace-nowrap text-gray-900">
+                                {summary.daysAbsent}
+                              </td>
+                            )}
+
+                            {columnVisibility.totalHrs && (
+                              <td className="w-[90px] px-4 py-3 whitespace-nowrap text-gray-900">
+                                {summary.totalHours?.toFixed(2)}
+                              </td>
+                            )}
+
+                            {columnVisibility.ot && (
+                              <td className="w-[70px] px-4 py-3 whitespace-nowrap text-gray-900">
+                                {summary.overtimeHours?.toFixed(2)}
+                              </td>
+                            )}
+
+                            {columnVisibility.advance && (
+                              <td className="w-[100px] px-4 py-3 whitespace-nowrap text-gray-900">
+                                ₹{summary.advanceAmount}
+                              </td>
+                            )}
+
+                            {columnVisibility.deductions && (
+                              <td className="w-[110px] px-4 py-3 whitespace-nowrap text-gray-900">
+                                ₹
+                                {Object.values(summary.deductions || {}).reduce(
+                                  (a: number, b: any) => a + Number(b || 0),
+                                  0
+                                )}
+                              </td>
+                            )}
+
+                            {columnVisibility.netSalary && (
+                              <td className="w-[130px] px-4 py-3 whitespace-nowrap font-semibold text-green-600">
+                                ₹{summary.netSalary?.toFixed(2)}
+                              </td>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            {columnVisibility.present && (
+                              <td className="w-[80px] px-4 py-3 text-center text-gray-400">—</td>
+                            )}
+                            {columnVisibility.absent && (
+                              <td className="w-[80px] px-4 py-3 text-center text-gray-400">—</td>
+                            )}
+                            {columnVisibility.totalHrs && (
+                              <td className="w-[90px] px-4 py-3 text-center text-gray-400">—</td>
+                            )}
+                            {columnVisibility.ot && (
+                              <td className="w-[70px] px-4 py-3 text-center text-gray-400">—</td>
+                            )}
+                            {columnVisibility.advance && (
+                              <td className="w-[100px] px-4 py-3 text-center text-gray-400">₹0</td>
+                            )}
+                            {columnVisibility.deductions && (
+                              <td className="w-[110px] px-4 py-3 text-center text-gray-400">₹0</td>
+                            )}
+                            {columnVisibility.netSalary && (
+                              <td className="w-[130px] px-4 py-3 text-center text-gray-400">
+                                Not calculated
+                              </td>
+                            )}
+                          </>
+                        )}
+
+                        {columnVisibility.actions && (
+                          <td className="w-[280px] px-4 py-3 whitespace-nowrap">
                             <div className="flex gap-2">
                               {/* Hidden barcode for download */}
                               <div
-                                ref={(el) => (barcodeRefs.current[employee.id] = el)}
+                                ref={(el) => { barcodeRefs.current[employee.id] = el; }}
                                 className="absolute -left-[9999px] top-0 bg-white p-4"
                               >
                                 <Barcode
@@ -886,15 +960,16 @@ const loadDashboard = async (
                             </div>
                           </td>
                         )}
-        </tr>
-      );
-    })}
-</tbody>
-
+                      </tr>
+                    );
+                  })}
+              </tbody>
             </table>
           </div>
         </CardContent>
       </Card>
+
+
     </div>
   );
 }
