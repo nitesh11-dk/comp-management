@@ -470,7 +470,7 @@ export default function CombinedEmployeeDashboard() {
             </div>
 
 
-            <div className="flex items-end">
+            {/* <div className="flex items-end">
               <Button variant="outline" disabled={isBusy || !appliedFilters} onClick={recalcAll} className="w-full">
                 {recalcLoading === "ALL" ? (
                   <>
@@ -484,7 +484,7 @@ export default function CombinedEmployeeDashboard() {
                   </>
                 )}
               </Button>
-            </div>
+            </div> */}
           </div>
 
           {/* Employee Search */}
@@ -543,7 +543,7 @@ export default function CombinedEmployeeDashboard() {
             disabled={savingSettings}
             onClick={saveAsDefaults}
           >
-            {savingSettings ? "Saving..." : "Set as Global Defaults"}
+            {savingSettings ? "Saving..." : "Save Filter"}
           </Button>
         </CardHeader>
         <CardContent>
