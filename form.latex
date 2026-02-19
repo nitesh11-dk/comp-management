@@ -1,89 +1,139 @@
 \documentclass[a4paper,12pt]{article}
+
 \usepackage[margin=1in]{geometry}
 \usepackage{array}
 \usepackage{graphicx}
 \usepackage{setspace}
 \usepackage{titlesec}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{helvet}
 
-\titlespacing*{\section}{0pt}{14pt}{6pt}
+\renewcommand{\familydefault}{\sfdefault}
 
-\newcommand{\linefill}{\rule{11cm}{0.4pt}}
-\newcommand{\shortline}{\rule{7cm}{0.4pt}}
+% ---------- Colors ----------
+\definecolor{primary}{HTML}{1F3A5F}   % Navy blue
+\definecolor{secondary}{HTML}{4A6FA5} % Muted blue
+\definecolor{lightbg}{HTML}{F4F6F8}   % Soft grey
+
+% ---------- Section style ----------
+\titleformat{\section}
+  {\color{primary}\large\bfseries}
+  {}
+  {0pt}
+  {}
+
+\titlespacing*{\section}{0pt}{16pt}{8pt}
+
+\newcommand{\linefill}{\rule{10cm}{0.4pt}}
+\newcommand{\shortline}{\rule{6cm}{0.4pt}}
 
 \begin{document}
 
+% ================= HEADER =================
 \begin{center}
-    {\Large \textbf{EMPLOYEE REGISTRATION FORM}}\\[6pt]
-    \rule{\linewidth}{0.5pt}
+  {\Huge \color{primary}\textbf{SHREE SAI ENGINEERING}}\\[4pt]
+  {\color{secondary}\small Employee Registration \& HR Record}\\[10pt]
+  \rule{\linewidth}{0.6pt}
 \end{center}
 
-% ================ Section 1 ==================
-\section*{1. Basic Details}
+\vspace{12pt}
 
-\textbf{Name:} \linefill \\[12pt]
-\textbf{Mobile No:} \linefill \\[12pt]
-\textbf{Aadhaar No:} \linefill \\[12pt]
-\textbf{PAN No:} \linefill \\[12pt]
-\textbf{Date of Birth:} \linefill \\[12pt]
-\textbf{Gender:} (Male / Female / Other) \linefill \\[12pt]
+% ================= BASIC DETAILS =================
+\begin{tcolorbox}[
+  colback=lightbg,
+  colframe=lightbg,
+  boxrule=0pt,
+  arc=4pt,
+  left=12pt,
+  right=12pt
+]
+\section*{Basic Details}
 
-% ================ Section 2 ==================
-\section*{2. Address Details}
+\textbf{Name:} \linefill \\[10pt]
+\textbf{Mobile No:} \linefill \\[10pt]
+\textbf{Aadhaar No:} \linefill \\[10pt]
+\textbf{PAN No:} \linefill \\[10pt]
+\textbf{Date of Birth:} \linefill \\[10pt]
+\textbf{Gender:} (Male / Female / Other) \linefill
+\end{tcolorbox}
 
-\textbf{Current Address:}\\[-4pt]
+% ================= ADDRESS =================
+\begin{tcolorbox}[
+  colback=white,
+  colframe=lightbg,
+  boxrule=0.4pt,
+  arc=4pt,
+  left=12pt,
+  right=12pt
+]
+\section*{Address Details}
 
+\textbf{Current Address}\\[6pt]
+House / Flat No: \linefill \\[8pt]
+Street: \linefill \\[8pt]
+Area / Locality: \linefill \\[8pt]
+City: \linefill \hfill State: \linefill \\[8pt]
+Pincode: \linefill \\[12pt]
 
-\textbf{House / Flat No:} \linefill \\[10pt]
-\textbf{Street:} \linefill \\[10pt]
-\textbf{Area / Locality:} \linefill \\[10pt]
-\textbf{City:} \linefill \\[10pt]
-\textbf{District:} \linefill \\[10pt]
-\textbf{State:} \linefill \\[10pt]
-\textbf{Pincode:} \linefill \\[10pt]
+\textbf{Permanent Address} (✓ Same as Current)\\[6pt]
+House / Flat No: \linefill \\[8pt]
+Street: \linefill \\[8pt]
+Area / Locality: \linefill \\[8pt]
+City: \linefill \hfill State: \linefill \\[8pt]
+Pincode: \linefill
+\end{tcolorbox}
 
-\vspace{10pt}
+% ================= BANK DETAILS =================
+\begin{tcolorbox}[
+  colback=lightbg,
+  colframe=lightbg,
+  boxrule=0pt,
+  arc=4pt,
+  left=12pt,
+  right=12pt
+]
+\section*{Bank Details}
 
-\textbf{Permanent Address (✓ Same as current):}\\[-4pt]
+Bank Name: \linefill \\[10pt]
+Branch Name: \linefill \\[10pt]
+Account No: \linefill \\[10pt]
+IFSC Code: \linefill
+\end{tcolorbox}
 
+% ================= EMPLOYMENT =================
+\begin{tcolorbox}[
+  colback=white,
+  colframe=lightbg,
+  boxrule=0.4pt,
+  arc=4pt,
+  left=12pt,
+  right=12pt
+]
+\section*{Employment Details}
 
-\textbf{House / Flat No:} \linefill \\[10pt]
-\textbf{Street:} \linefill \\[10pt]
-\textbf{Area / Locality:} \linefill \\[10pt]
-\textbf{City:} \linefill \\[10pt]
-\textbf{District:} \linefill \\[10pt]
-\textbf{State:} \linefill \\[10pt]
-\textbf{Pincode:} \linefill \\[10pt]
+Department: \linefill \\[10pt]
+Shift Type: \linefill \\[10pt]
+Hourly Rate: \linefill \\[10pt]
+PF ID: \linefill \\[10pt]
+ESIC ID: \linefill
+\end{tcolorbox}
 
-% ================ Section 3 ==================
-\section*{3. Bank Details}
-
-\textbf{Bank Account No:} \linefill \\[12pt]
-\textbf{IFSC Code:} \linefill \\[12pt]
-\textbf{Bank Name:} \linefill \\[12pt]
-\textbf{Branch Name:} \linefill \\[12pt]
-
-% ================ Section 4 ==================
-\section*{4. PF / ESIC Details}
-
-\textbf{PF ID:} \linefill \\[12pt]
-\textbf{ESIC ID:} \linefill \\[12pt]
-
-% ================ Section 5 ==================
-\section*{5. Employment Details}
-
-\textbf{Department:} \linefill \\[12pt]
-\textbf{Shift Type:} \linefill \\[12pt]
-\textbf{Hourly Rate:} \linefill \\[12pt]
-
-% ================ Declaration ==================
-\vspace{20pt}
+% ================= DECLARATION =================
+\vspace{18pt}
 \section*{Declaration}
 
-I hereby declare that all the information provided is true and correct to the best of my knowledge.
+I hereby declare that the information provided above is true and correct
+to the best of my knowledge.
 
-\vspace{40pt}
+\vspace{32pt}
 
 \textbf{Employee Signature:} \shortline \hfill
 \textbf{HR Signature:} \shortline
+
+\vspace{10pt}
+\begin{center}
+{\small \color{secondary}Shree Sai Engineering • Internal HR Document}
+\end{center}
 
 \end{document}
