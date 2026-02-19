@@ -1,6 +1,8 @@
 "use client";
 
-import { useTransition } from "react";
+export const dynamic = "force-dynamic";
+
+import { useTransition, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 
@@ -36,7 +38,9 @@ const Page = () => {
       {/* ===============================
          MAIN CONTENT - COMBINED DASHBOARD
       =============================== */}
-      <CombinedEmployeeDashboard />
+      <Suspense fallback={<div className="text-center py-10">Loading dashboard...</div>}>
+        <CombinedEmployeeDashboard />
+      </Suspense>
     </div>
   );
 };
