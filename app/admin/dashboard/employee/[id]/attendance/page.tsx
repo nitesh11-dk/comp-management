@@ -11,11 +11,13 @@ import { calculateWorkLogs, getAttendanceWallet } from "@/actions/attendance";
 
 import WorkLogTable from "@/components/admin/WorkLogTable";
 import { generateFakeAttendance } from "@/actions/fakeattandace";
+import { useDataCache } from "@/components/providers/DataProvider";
 
 const EmployeeAttendancePage = memo(function EmployeeAttendancePage() {
   const params = useParams();
   const router = useRouter();
   const employeeId = params.id as string;
+  const { getCachedData, setCachedData } = useDataCache();
 
   const [employee, setEmployee] = useState<any>(null);
   const [attendanceWallet, setAttendanceWallet] = useState<any>(null);
@@ -30,8 +32,15 @@ const EmployeeAttendancePage = memo(function EmployeeAttendancePage() {
   // -----------------------------------------
   const loadEmployee = useCallback(async () => {
     if (!employeeId) return;
-    setLoadingEmployee(true);
 
+    const cached = getCachedData<any>(`emp_${employeeId}`);
+    if (cached) {
+      setEmployee(cached);
+      setLoadingEmployee(false);
+      return;
+    }
+
+    setLoadingEmployee(true);
     try {
       const empRes = await getEmployeeById(employeeId);
       if (!empRes.success || !empRes.data) {
@@ -40,16 +49,25 @@ const EmployeeAttendancePage = memo(function EmployeeAttendancePage() {
       }
 
       setEmployee(empRes.data);
+      setCachedData(`emp_${employeeId}`, empRes.data);
     } finally {
       setLoadingEmployee(false);
     }
-  }, [employeeId, router]);
+  }, [employeeId, router, getCachedData, setCachedData]);
 
-  // -----------------------------------------
-  // Refresh attendance logs (work logs)
-  // -----------------------------------------
   const refreshLogs = useCallback(async () => {
     if (!employeeId) return;
+
+    const cacheKey = `att_${employeeId}`;
+    const cached = getCachedData<any>(cacheKey);
+
+    if (cached && !expandedDate) {
+      setAttendanceWallet(cached.wallet);
+      setWorkLogs(cached.logs);
+      setLoadingLogs(false);
+      return;
+    }
+
     setLoadingLogs(true);
 
     try {
@@ -65,7 +83,8 @@ const EmployeeAttendancePage = memo(function EmployeeAttendancePage() {
       const logs = await calculateWorkLogs(wallet.entries, employee?.hourlyRate || 0);
       setWorkLogs(logs);
 
-      // If expanded day → refresh its entries also
+      setCachedData(cacheKey, { wallet, logs });
+
       if (expandedDate) {
         const filtered = wallet.entries.filter((e: any) =>
           e.timestamp.toISOString().startsWith(expandedDate)
@@ -75,7 +94,7 @@ const EmployeeAttendancePage = memo(function EmployeeAttendancePage() {
     } finally {
       setLoadingLogs(false);
     }
-  }, [employeeId, expandedDate, employee?.hourlyRate]);
+  }, [employeeId, expandedDate, employee?.hourlyRate, getCachedData, setCachedData]);
 
   useEffect(() => {
     loadEmployee();
@@ -170,11 +189,7 @@ const EmployeeAttendancePage = memo(function EmployeeAttendancePage() {
       ) : (
         <WorkLogTable
           workLogs={workLogs}
-          expandedDate={expandedDate}
-          dayEntries={dayEntries}
-          onExpand={handleExpand}
           employeeId={employee.id}
-          onRefresh={refreshLogs}
         />
       )}
     </div>

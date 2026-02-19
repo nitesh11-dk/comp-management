@@ -20,7 +20,8 @@ function serializeCycleTiming(ct: any) {
 export async function createCycleTiming(data: {
     name: string;
     startDay: number;
-    lengthDays?: number;
+    endDay: number;
+    span: "SAME_MONTH" | "NEXT_MONTH";
     description?: string;
 }): Promise<ActionResponse<any>> {
     try {
@@ -30,19 +31,22 @@ export async function createCycleTiming(data: {
             return { success: false, message: "⚠️ Name is too short" };
         }
 
-        if (!data.startDay || data.startDay < 1 || data.startDay > 28) {
+        if (data.startDay < 1 || data.startDay > 28) {
             return {
                 success: false,
                 message: "⚠️ startDay must be between 1 and 28",
             };
         }
 
-        const length = data.lengthDays ?? 30;
-        if (length < 1 || length > 31) {
+        if (data.endDay < 1 || data.endDay > 31) {
             return {
                 success: false,
-                message: "⚠️ lengthDays must be between 1 and 31",
+                message: "⚠️ endDay must be between 1 and 31",
             };
+        }
+
+        if (!data.span) {
+            return { success: false, message: "⚠️ Span is required" };
         }
 
         // Check duplicate name
@@ -62,7 +66,8 @@ export async function createCycleTiming(data: {
             data: {
                 name: data.name,
                 startDay: data.startDay,
-                lengthDays: length,
+                endDay: data.endDay,
+                span: data.span as any,
                 description: data.description || null,
             },
         });
@@ -137,7 +142,7 @@ export async function updateCycleTiming(
 ): Promise<ActionResponse<any>> {
     try {
         // VALIDATION
-        if (updates.startDay) {
+        if (updates.startDay !== undefined) {
             if (updates.startDay < 1 || updates.startDay > 28) {
                 return {
                     success: false,
@@ -146,11 +151,11 @@ export async function updateCycleTiming(
             }
         }
 
-        if (updates.lengthDays) {
-            if (updates.lengthDays < 1 || updates.lengthDays > 31) {
+        if (updates.endDay !== undefined) {
+            if (updates.endDay < 1 || updates.endDay > 31) {
                 return {
                     success: false,
-                    message: "⚠️ lengthDays must be 1–31",
+                    message: "⚠️ endDay must be between 1 and 31",
                 };
             }
         }
@@ -158,7 +163,10 @@ export async function updateCycleTiming(
         // Update
         const cycle = await prisma.cycleTiming.update({
             where: { id },
-            data: updates,
+            data: {
+                ...updates,
+                description: updates.description === null ? undefined : updates.description
+            },
         });
 
         return {

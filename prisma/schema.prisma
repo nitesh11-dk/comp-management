@@ -8,222 +8,151 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-//
-// ---------------------- USER ----------------------
-//
-
-enum UserRole {
-  admin
-  supervisor
-}
-
 model User {
-  id           String      @id @default(uuid())
-  username     String      @unique
-  password     String
-  role         UserRole
-  departmentId String?
-  department   Department? @relation(fields: [departmentId], references: [id])
-
+  id                String            @id @default(uuid())
+  username          String            @unique
+  password          String
+  role              UserRole
+  departmentId      String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
   attendanceEntries AttendanceEntry[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  department        Department?       @relation(fields: [departmentId], references: [id])
 }
 
 model SystemSetting {
-  id    String @id @default(uuid())
-  key   String @unique
-  value Json
-
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
-
-//
-// ---------------------- DEPARTMENT ----------------------
-//
 
 model Department {
-  id          String     @id @default(uuid())
-  name        String     @unique
-  description String?
-
-  users         User[]
-  employees     Employee[]
+  id                String            @id @default(uuid())
+  name              String            @unique
+  description       String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
   attendanceEntries AttendanceEntry[]
-
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  employees         Employee[]
+  users             User[]
 }
-
-//
-// ---------------------- EMPLOYEE ----------------------
-//
 
 model Employee {
-  id             String       @id @default(uuid())
-  empCode        String       @unique
-  name           String
-
-  pfId           String?      @unique
-  pfActive       Boolean      @default(true)
-
-  // ✅ NEW FIELD
-  pfAmountPerDay Float?       @default(0)
-
-  esicId         String?      @unique
-  esicActive     Boolean      @default(true)
-
-  aadhaarNumber  String       @unique
-  panNumber      String?      @unique
-  dob            DateTime?
-  mobile         String
-
-  currentAddress   String?
-  permanentAddress String?
-
+  id                String                     @id @default(uuid())
+  empCode           String                     @unique
+  name              String
+  pfId              String?                    @unique
+  esicId            String?                    @unique
+  aadhaarNumber     String                     @unique
+  mobile            String
+  hourlyRate        Float
+  profileComplete   Boolean                    @default(false)
+  departmentId      String
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+  shiftTypeId       String?
   bankAccountNumber String?
+  currentAddress    String?
+  cycleTimingId     String?
+  dob               DateTime?
+  esicActive        Boolean                    @default(true)
   ifscCode          String?
-
-  hourlyRate      Float
-  profileComplete Boolean @default(false)
-
-  departmentId String
-  department   Department @relation(fields: [departmentId], references: [id])
-
-  shiftTypeId   String?
-  shiftType     ShiftType? @relation(fields: [shiftTypeId], references: [id])
-
-  cycleTimingId String?
-  cycleTiming   CycleTiming? @relation(fields: [cycleTimingId], references: [id])
-
-  attendanceWallet AttendanceWallet?
-  monthlySummaries MonthlyAttendanceSummary[]
-
-  joinedAt DateTime
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  panNumber         String?                    @unique
+  permanentAddress  String?
+  pfActive          Boolean                    @default(true)
+  joinedAt          DateTime
+  pfAmountPerDay    Float?                     @default(0)
+  attendanceWallet  AttendanceWallet?
+  cycleTiming       CycleTiming?               @relation(fields: [cycleTimingId], references: [id])
+  department        Department                 @relation(fields: [departmentId], references: [id])
+  shiftType         ShiftType?                 @relation(fields: [shiftTypeId], references: [id])
+  monthlySummaries  MonthlyAttendanceSummary[]
 }
-
-//
-// ---------------------- CYCLE TIMING ----------------------
-//
 
 model CycleTiming {
-  id          String   @id @default(uuid())
+  id          String     @id @default(uuid())
   name        String
-  startDay    Int      // 1..28
-  lengthDays  Int      @default(30)
+  startDay    Int
   description String?
-
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  span        CycleSpan
+  endDay      Int
   employees   Employee[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
-
-//
-// ---------------------- MONTHLY SUMMARY ----------------------
-//
 
 model MonthlyAttendanceSummary {
   id            String   @id @default(uuid())
-
   employeeId    String
-  employee      Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-
   cycleStart    DateTime
   cycleEnd      DateTime
-
   daysInCycle   Int
   daysPresent   Int
-  daysAbsent    Int
-
   totalHours    Float
-  overtimeHours Float    @default(0)
-
   hourlyRate    Float
-
-  advanceAmount Float    @default(0)
-
-  // Default deductions structure:
-  // { "shoes": 0, "canteen": 0 }
-  deductions    Json     @default("{\"shoes\":0,\"canteen\":0}")
-
+  deductions    Json     @default("{\"shoes\": 0, \"canteen\": 0}")
   netSalary     Float
-
   generatedAt   DateTime @default(now())
-
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  advanceAmount Float    @default(0)
+  daysAbsent    Int
+  overtimeHours Float    @default(0)
+  employee      Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@unique([employeeId, cycleStart])
 }
 
-
-
-//
-// ---------------------- ATTENDANCE ENTRY ----------------------
-//
-
-enum ScanType {
-  in
-  out
-}
-
 model AttendanceEntry {
-  id            String    @id @default(uuid())
-  timestamp     DateTime  @default(now())
-  scanType      ScanType
-
-  departmentId  String
-  department    Department @relation(fields: [departmentId], references: [id])
-
-  scannedBy     String
-  user          User @relation(fields: [scannedBy], references: [id])
-
-  walletId      String
-  wallet        AttendanceWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
-
-  autoClosed    Boolean   @default(false)
+  id           String           @id @default(uuid())
+  timestamp    DateTime         @default(now())
+  scanType     ScanType
+  departmentId String
+  scannedBy    String
+  walletId     String
+  autoClosed   Boolean          @default(false)
+  department   Department       @relation(fields: [departmentId], references: [id])
+  user         User             @relation(fields: [scannedBy], references: [id])
+  wallet       AttendanceWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
 
   @@index([walletId])
   @@index([timestamp])
   @@index([walletId, timestamp])
 }
 
-//
-// ---------------------- ATTENDANCE WALLET ----------------------
-//
-
 model AttendanceWallet {
-  id         String   @id @default(uuid())
-  employeeId String   @unique
-  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-
+  id         String            @id @default(uuid())
+  employeeId String            @unique
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
   entries    AttendanceEntry[]
-
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  employee   Employee          @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 }
 
-//
-// ---------------------- SHIFT TYPE ----------------------
-//
-
 model ShiftType {
-  id          String    @id @default(uuid())
-  name        String    @unique
+  id         String     @id @default(uuid())
+  name       String     @unique
+  startTime  DateTime
+  endTime    DateTime
+  totalHours Float
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  employees  Employee[]
+}
 
-  startTime   DateTime
-  endTime     DateTime
+enum UserRole {
+  admin
+  supervisor
+}
 
-  totalHours  Float
+enum CycleSpan {
+  SAME_MONTH
+  NEXT_MONTH
+}
 
-  employees   Employee[]
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+enum ScanType {
+  in
+  out
 }

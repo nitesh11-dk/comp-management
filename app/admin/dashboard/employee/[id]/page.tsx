@@ -7,11 +7,13 @@ import { ArrowLeft, Calendar } from "lucide-react";
 
 import { getEmployeeById } from "@/actions/employeeActions";
 import EmployeeInfoCard from "@/components/admin/EmployeeInfoCard";
+import { useDataCache } from "@/components/providers/DataProvider";
 
 const EmployeeDetailsPage = memo(function EmployeeDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const employeeId = params.id as string;
+  const { getCachedData, setCachedData } = useDataCache();
 
   const [employee, setEmployee] = useState<any>(null);
   const [department, setDepartment] = useState<any>(null);
@@ -22,6 +24,18 @@ const EmployeeDetailsPage = memo(function EmployeeDetailsPage() {
 
   const loadEmployee = useCallback(async () => {
     if (!employeeId) return;
+
+    // Check Cache
+    const cached = getCachedData<any>(`emp_${employeeId}`);
+    if (cached) {
+      setEmployee(cached);
+      setDepartment(cached.department);
+      setShiftType(cached.shiftType);
+      setCycleTiming(cached.cycleTiming);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -36,10 +50,11 @@ const EmployeeDetailsPage = memo(function EmployeeDetailsPage() {
       setDepartment(res.data.department);
       setShiftType(res.data.shiftType);
       setCycleTiming(res.data.cycleTiming);
+      setCachedData(`emp_${employeeId}`, res.data);
     } finally {
       setLoading(false);
     }
-  }, [employeeId, router]);
+  }, [employeeId, router, getCachedData, setCachedData]);
 
   useEffect(() => {
     loadEmployee();
@@ -58,7 +73,7 @@ const EmployeeDetailsPage = memo(function EmployeeDetailsPage() {
 
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-        <Button variant="outline" onClick={() => router.push('/admin/dashboard')} size="sm" className="self-start">
+        <Button variant="outline" onClick={() => router.back()} size="sm" className="self-start">
           <ArrowLeft className="h-4 w-4 mr-2" /> Back
         </Button>
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-1">
@@ -75,7 +90,7 @@ const EmployeeDetailsPage = memo(function EmployeeDetailsPage() {
             <Calendar className="h-4 w-4 mr-2" />
             View Attendance
           </Button>
-         
+
         </div>
       </div>
 

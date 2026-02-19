@@ -17,11 +17,13 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
 import { ChevronLeft, Trash2, ArrowLeft } from "lucide-react";
+import { useDataCache } from "@/components/providers/DataProvider";
 
 export default function EditEmployeePage() {
     const router = useRouter();
     const params = useParams();
-    const employeeId = params.id;
+    const employeeId = params.id as string;
+    const { clearCache } = useDataCache();
 
     const [departments, setDepartments] = useState<any[]>([]);
     const [shiftTypes, setShiftTypes] = useState<any[]>([]);
@@ -68,9 +70,9 @@ export default function EditEmployeePage() {
                     getEmployeeById(employeeId),
                 ]);
 
-                if (deptRes.success) setDepartments(deptRes.data);
-                if (shiftRes.success) setShiftTypes(shiftRes.data);
-                if (cycleRes.success) setCycleTimings(cycleRes.data);
+                if (deptRes.success) setDepartments(deptRes.data || []);
+                if (shiftRes.success) setShiftTypes(shiftRes.data || []);
+                if (cycleRes.success) setCycleTimings(cycleRes.data || []);
 
                 if (empRes.success && empRes.data) {
                     const emp = empRes.data;
@@ -94,9 +96,9 @@ export default function EditEmployeePage() {
                         bankAccountNumber: emp.bankAccountNumber || "",
                         ifscCode: emp.ifscCode || "",
                         hourlyRate: String(emp.hourlyRate),
-                            joinedAt: emp.joinedAt
-      ? emp.joinedAt.split("T")[0]
-      : "", // ✅ IMPORTANT
+                        joinedAt: emp.joinedAt
+                            ? emp.joinedAt.split("T")[0]
+                            : "", // ✅ IMPORTANT
 
                     });
                 }
@@ -173,6 +175,9 @@ export default function EditEmployeePage() {
             const res = await updateEmployee(employeeId, payload);
 
             if (res.success) {
+                clearCache(`emp_${employeeId}`);
+                clearCache("dash_", true);
+
                 setMessage("Employee updated successfully");
                 setMessageType("success");
                 toast.success("Employee updated successfully");
@@ -244,12 +249,12 @@ export default function EditEmployeePage() {
 
                                 <InputField type="date" label="Date of Birth" value={formData.dob}
                                     onChange={(v) => setFormData({ ...formData, dob: v })} />
-<InputField
-  type="date"
-  label="Joining Date *"
-  value={formData.joinedAt}
-  onChange={(v) => setFormData({ ...formData, joinedAt: v })}
-/>
+                                <InputField
+                                    type="date"
+                                    label="Joining Date *"
+                                    value={formData.joinedAt}
+                                    onChange={(v) => setFormData({ ...formData, joinedAt: v })}
+                                />
 
                                 <InputField label="Current Address" value={formData.currentAddress}
                                     onChange={(v) => setFormData({ ...formData, currentAddress: v })} />
@@ -358,7 +363,7 @@ export default function EditEmployeePage() {
 }
 
 /* ------------------ Input Field Component ------------------ */
-function InputField({ label, value, onChange, type = "text", maxLength, placeholder }: any) {
+function InputField({ label, value, onChange, type = "text", maxLength, placeholder, step }: { label: string, value: string, onChange: (v: string) => void, type?: string, maxLength?: number, placeholder?: string, step?: string }) {
     return (
         <div>
             <Label>{label}</Label>
@@ -368,13 +373,14 @@ function InputField({ label, value, onChange, type = "text", maxLength, placehol
                 onChange={(e) => onChange(e.target.value)}
                 maxLength={maxLength}
                 placeholder={placeholder}
+                step={step}
             />
         </div>
     );
 }
 
 /* ------------------ Select Field Component ------------------ */
-function SelectField({ label, value, items, onChange, display, allowNull }: any) {
+function SelectField({ label, value, items, onChange, display, allowNull }: { label: string, value: string, items: any[], onChange: (v: string) => void, display: (x: any) => string, allowNull?: boolean }) {
     return (
         <div>
             <Label>{label}</Label>

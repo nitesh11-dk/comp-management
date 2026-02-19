@@ -163,24 +163,13 @@ export default function ShiftTypesPage() {
     };
 
     return (
-        <div className="p-2 space-y-6">
-
-            {/* BACK BUTTON */}
-            <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.push("/admin/dashboard")}
-                className="flex items-center gap-2"
-            >
-                <ArrowLeft className="h-4 w-4" /> Back to Dashboard
-            </Button>
-
-            <h1 className="text-2xl font-bold">Shift Type Management</h1>
+        <div className="p-4 md:p-6 lg:p-8 space-y-6">
+            <h1 className="text-2xl font-bold text-slate-900 border-l-4 border-blue-600 pl-4">Shift Type Management</h1>
 
             {/* ADD SHIFT */}
-            <Card className="w-full md:max-w-lg">
-                <CardHeader>
-                    <CardTitle>Add Shift Type</CardTitle>
+            <Card className="w-full md:max-w-lg border-slate-200">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-3">
+                    <CardTitle className="text-sm font-bold text-slate-700">Add Shift Type</CardTitle>
                 </CardHeader>
 
                 <CardContent>
@@ -215,7 +204,7 @@ export default function ShiftTypesPage() {
                             />
                         </div>
 
-                        <Button type="submit" disabled={isCreating} className="w-full">
+                        <Button type="submit" disabled={isCreating} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold">
                             {isCreating ? "Creating..." : "Add Shift"}
                         </Button>
                     </form>
@@ -223,9 +212,9 @@ export default function ShiftTypesPage() {
             </Card>
 
             {/* TABLE */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>All Shift Types</CardTitle>
+            <Card className="border-slate-200">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-3">
+                    <CardTitle className="text-sm font-bold text-slate-700">All Shift Types</CardTitle>
                 </CardHeader>
 
                 <CardContent>

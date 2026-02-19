@@ -119,25 +119,13 @@ export default function DepartmentsPage() {
     };
 
     return (
-        <div className="2 space-y-6">
-
-            {/* BACK BUTTON */}
-            <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.push("/admin/dashboard")}
-                className="flex items-center gap-2"
-            >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Dashboard
-            </Button>
-
-            <h1 className="text-2xl font-bold">Department Management</h1>
+        <div className="p-4 md:p-6 lg:p-8 space-y-6">
+            <h1 className="text-2xl font-bold text-slate-900 border-l-4 border-blue-600 pl-4">Department Management</h1>
 
             {/* ADD NEW DEPARTMENT */}
-            <Card className="w-full md:max-w-lg">
-                <CardHeader>
-                    <CardTitle>Add Department</CardTitle>
+            <Card className="w-full md:max-w-lg border-slate-200">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-3">
+                    <CardTitle className="text-sm font-bold text-slate-700">Add Department</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleCreate} className="space-y-4">
@@ -157,7 +145,7 @@ export default function DepartmentsPage() {
                             }
                         />
 
-                        <Button type="submit" disabled={isCreating} className="w-full">
+                        <Button type="submit" disabled={isCreating} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold">
                             {isCreating ? "Creating..." : "Add Department"}
                         </Button>
                     </form>
@@ -165,9 +153,9 @@ export default function DepartmentsPage() {
             </Card>
 
             {/* TABLE */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>All Departments</CardTitle>
+            <Card className="border-slate-200">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-3">
+                    <CardTitle className="text-sm font-bold text-slate-700">All Departments</CardTitle>
                 </CardHeader>
 
                 <CardContent>

@@ -2,116 +2,140 @@
 
 import prisma from "@/lib/prisma";
 import { calculateWorkLogs } from "./attendance";
-
-/* ----------------------------------------
-   UTIL: Cycle date range
------------------------------------------ */
-function getCycleRange(
-  year: number,
-  month: number,
-  startDay: number,
-  lengthDays: number
-) {
-  const cycleEnd = new Date(year, month - 1, startDay - 1, 23, 59, 59);
-  const cycleStart = new Date(cycleEnd);
-  cycleStart.setDate(cycleEnd.getDate() - lengthDays + 1);
-  cycleStart.setHours(0, 0, 0, 0);
-
-  return { cycleStart, cycleEnd };
-}
-
-/* ----------------------------------------
-   UTIL: Month range
------------------------------------------ */
-function getMonthRange(year: number, month: number) {
-  const monthStart = new Date(year, month - 1, 1, 0, 0, 0);
-  const monthEnd = new Date(year, month, 0, 23, 59, 59);
-  return { monthStart, monthEnd };
-}
-
-/* ----------------------------------------
-   UTIL: Effective cycle end
------------------------------------------ */
-function getEffectiveCycleEnd(
-  cycleEnd: Date,
-  year: number,
-  month: number
-) {
-  const today = new Date();
-  const { monthEnd } = getMonthRange(year, month);
-
-  return new Date(
-    Math.min(
-      cycleEnd.getTime(),
-      today.getTime(),
-      monthEnd.getTime()
-    )
-  );
-}
-
-/* ----------------------------------------
-   UTIL: Sum deductions
------------------------------------------ */
-function sumDeductions(deductions?: Record<string, number>) {
-  if (!deductions) return 0;
-  return Object.values(deductions).reduce(
-    (sum, v) => sum + Number(v || 0),
-    0
-  );
-}
+import dayjs from "dayjs";
+import {
+  resolveCycleDates,
+  getEffectiveEnd,
+  sumDeductions,
+  getSalaryMonthInfo
+} from "@/lib/payroll-utils";
+import { calculateSalaryComponents } from "@/lib/payroll-core";
 
 /* =========================================================
-   1️⃣ READ ONLY — STRICT FILTER
+   1️⃣ READ ONLY — GET EMPLOYEES WITH SUMMARY (FILTERED)
 ========================================================= */
-export async function getMonthlySummaries(input: {
+export async function getEmployeesWithMonthlySummary(input: {
   year: number;
   month: number;
-  cycleTimingId: string;
+  cycleTimingId?: string;
   departmentId?: string;
+  shiftTypeId?: string;
+  searchField?: string;
+  searchValue?: string;
 }) {
-  const { year, month, cycleTimingId, departmentId } = input;
+  const { year, month, cycleTimingId, departmentId, shiftTypeId, searchField, searchValue } = input;
 
-  if (!year || !month || !cycleTimingId) {
-    throw new Error("Year, Month and Cycle are required");
+  if (!year || !month) {
+    throw new Error("Year and Month are required");
   }
 
-  const cycle = await prisma.cycleTiming.findUnique({
-    where: { id: cycleTimingId },
+  // 1️⃣ Resolve which cycles we are dealing with
+  const cyclesToProcess = await prisma.cycleTiming.findMany({
+    where: cycleTimingId && cycleTimingId !== "all" ? { id: cycleTimingId } : {},
   });
-  if (!cycle) throw new Error("Invalid cycle");
 
-  const { cycleStart } = getCycleRange(
-    year,
-    month,
-    cycle.startDay,
-    cycle.lengthDays
-  );
+  // 2️⃣ Resolve valid cycle periods for this (Year, Month)
+  // Only keep cycles where this month is the official Salary Month
+  const referenceDate = new Date(year, month - 1, 15);
+  const validCycles = cyclesToProcess
+    .map((c: any) => {
+      const info = getSalaryMonthInfo(referenceDate, {
+        startDay: c.startDay,
+        endDay: c.endDay,
+        span: c.span as any,
+      });
+      return { ...info, cycleTimingId: c.id };
+    })
+    .filter((info) => info.salaryMonth === month && info.salaryYear === year);
 
-  const { monthEnd } = getMonthRange(year, month);
+  if (validCycles.length === 0) {
+    return [];
+  }
+
+  // 3️⃣ Build Search Filter
+  const searchFilter: any = {};
+  if (searchValue && searchValue.trim() !== "") {
+    const val = searchValue.trim();
+    if (searchField === "name") {
+      searchFilter.name = { contains: val, mode: "insensitive" };
+    } else if (searchField === "empCode") {
+      searchFilter.empCode = { contains: val, mode: "insensitive" };
+    } else if (searchField === "pfId") {
+      searchFilter.pfId = { contains: val, mode: "insensitive" };
+    } else if (searchField === "esicId") {
+      searchFilter.esicId = { contains: val, mode: "insensitive" };
+    } else if (searchField === "aadhaar") {
+      searchFilter.aadhaarNumber = { contains: val, mode: "insensitive" };
+    } else if (searchField === "mobile") {
+      searchFilter.mobile = { contains: val, mode: "insensitive" };
+    } else if (searchField === "bankAccount") {
+      searchFilter.bankAccountNumber = { contains: val, mode: "insensitive" };
+    } else if (searchField === "ifscCode") {
+      searchFilter.ifscCode = { contains: val, mode: "insensitive" };
+    } else if (searchField === "panNumber") {
+      searchFilter.panNumber = { contains: val, mode: "insensitive" };
+    }
+  }
+
+  // 4️⃣ Fetch employees with filtering
+  //
+  // When "all" cycles: include employees with a matching cycleTimingId OR with no cycle (null)
+  // When a specific cycle: only that cycle
+  // Department / Shift: when "all", pass undefined → no filter (Prisma includes nulls naturally)
+  const cycleFilter =
+    cycleTimingId && cycleTimingId !== "all"
+      ? { cycleTimingId }
+      : {
+        OR: [
+          { cycleTimingId: { in: validCycles.map((v) => v.cycleTimingId) } },
+          { cycleTimingId: null },
+        ],
+      };
+
+  const deptFilter =
+    departmentId && departmentId !== "all"
+      ? { departmentId }
+      : {}; // no filter → includes null dept employees
+
+  const shiftFilter =
+    shiftTypeId && shiftTypeId !== "all"
+      ? { shiftTypeId }
+      : {}; // no filter → includes null shift employees
 
   const employees = await prisma.employee.findMany({
     where: {
-      cycleTimingId,
-      departmentId: departmentId || undefined,
-      joinedAt: {
-        lte: monthEnd,
-      },
+      ...cycleFilter,
+      ...deptFilter,
+      ...shiftFilter,
+      ...searchFilter,
     },
     include: {
+      department: true,
+      shiftType: true,
+      cycleTiming: true,
       monthlySummaries: {
-        where: { cycleStart },
-        take: 1,
-      },
+        where: {
+          cycleStart: { in: validCycles.map(v => v.cycleStart) }
+        },
+      }
     },
-    orderBy: {
-      name: "asc",
-    },
+    orderBy: { name: "asc" },
   });
 
-  return employees.map((emp) => ({
-    employee: emp,
-    summary: emp.monthlySummaries[0] || null,
-  }));
+  // 4️⃣ Map to internal Row format
+  return employees.map((emp: any) => {
+    // Find the summary that matches this employee's cycle
+    const summary = emp.monthlySummaries.find((s: any) =>
+      dayjs(s.cycleStart).isSame(
+        validCycles.find(v => v.cycleTimingId === emp.cycleTimingId)?.cycleStart
+      )
+    );
+
+    return {
+      employee: emp,
+      summary: summary || null,
+    };
+  });
 }
 
 /* =========================================================
@@ -133,29 +157,33 @@ async function calculateOneEmployee({
   });
   if (!employee) throw new Error("Employee not found");
 
-  const cycle = await prisma.cycleTiming.findUnique({
+  const cycle = (await prisma.cycleTiming.findUnique({
     where: { id: cycleTimingId },
-  });
+  })) as any;
   if (!cycle) throw new Error("Cycle not found");
 
-  const { cycleStart, cycleEnd } = getCycleRange(
-    year,
-    month,
-    cycle.startDay,
-    cycle.lengthDays
-  );
+  // Determine Salary Month based on reference
+  const referenceDate = new Date(year, month - 1, 15);
+  const info = getSalaryMonthInfo(referenceDate, {
+    startDay: cycle.startDay,
+    endDay: cycle.endDay,
+    span: cycle.span as any,
+  });
+
+  // Rule 5: Selected month represents SALARY MONTH
+  if (info.salaryMonth !== month || info.salaryYear !== year) {
+    return null; // Do not calculate if it belongs to another month
+  }
+
+  const { cycleStart, cycleEnd, daysInSalaryMonth } = info;
 
   // ❌ Not eligible for this cycle
   if (employee.joinedAt > cycleEnd) {
     return null;
   }
 
-  // ✅ Effective end (IMPORTANT)
-  const effectiveCycleEnd = getEffectiveCycleEnd(
-    cycleEnd,
-    year,
-    month
-  );
+  // ✅ Effective end (cannot calculate for future)
+  const effectiveCycleEnd = getEffectiveEnd(cycleEnd);
 
   // 🔍 Existing summary (manual values preserve)
   const existingSummary =
@@ -190,18 +218,29 @@ async function calculateOneEmployee({
     employee.hourlyRate
   );
 
+  // daysPresent = unique days with valid work logs
   const daysPresent = workLogs.length;
 
-  const daysInCycle =
-    Math.floor(
-      (effectiveCycleEnd.getTime() - cycleStart.getTime()) /
-        (1000 * 60 * 60 * 24)
-    ) + 1;
+  // RULE 4: daysInCycle MUST be based on cycle days falling in the salary month
+  const daysInCycle = daysInSalaryMonth;
 
-  const daysAbsent = Math.max(0, daysInCycle - daysPresent);
+  // Rule: For ongoing cycles, calculate absent days based on days passed so far (up to today)
+  const now = dayjs();
+  const cycleEndDayjs = dayjs(cycleEnd);
+  let effectiveDaysForAbsent = daysInCycle;
+
+  if (now.isBefore(cycleEndDayjs)) {
+    // If cycle is ongoing, only count days until today
+    const startDayjs = dayjs(cycleStart);
+    effectiveDaysForAbsent = Math.max(0, now.diff(startDayjs, "day") + 1);
+    effectiveDaysForAbsent = Math.min(effectiveDaysForAbsent, daysInCycle);
+  }
+
+  // daysAbsent = effectiveDaysSinceStart − daysPresent
+  const daysAbsent = Math.max(0, effectiveDaysForAbsent - daysPresent);
 
   const totalHours = workLogs.reduce(
-    (sum, d) => sum + d.totalHours,
+    (sum: number, d: any) => sum + d.totalHours,
     0
   );
 
@@ -213,17 +252,18 @@ async function calculateOneEmployee({
     canteen: 0,
   };
 
-  // PF Deduction
-  const pfDeduction = employee.pfActive && employee.pfAmountPerDay ? (employee.pfAmountPerDay * daysPresent) : 0;
-
-  const netSalary =
-    Math.round(
-      (totalHours + overtimeHours) * employee.hourlyRate * 100
-    ) /
-      100 -
-    advanceAmount -
-    sumDeductions(deductions) -
-    pfDeduction;
+  // Centralized Payroll Calculation
+  const { netSalary } = calculateSalaryComponents({
+    totalHours,
+    hourlyRate: employee.hourlyRate,
+    overtimeHours,
+    advanceAmount,
+    deductions,
+    daysPresent,
+    pfActive: employee.pfActive,
+    pfAmountPerDay: employee.pfAmountPerDay,
+    esicActive: employee.esicActive,
+  });
 
   return prisma.monthlyAttendanceSummary.upsert({
     where: {
@@ -233,6 +273,7 @@ async function calculateOneEmployee({
       },
     },
     update: {
+      cycleEnd,
       daysInCycle,
       daysPresent,
       daysAbsent,
@@ -269,9 +310,11 @@ export async function calculateMonthlyForEmployee(input: {
   year: number;
   month: number;
 }) {
+  const result = await calculateOneEmployee(input);
   return {
-    success: true,
-    data: await calculateOneEmployee(input),
+    success: !!result,
+    data: result,
+    message: result ? "Calculated" : "This month is not the official Salary Month for this cycle.",
   };
 }
 
@@ -283,13 +326,15 @@ export async function calculateMonthlyForAllEmployees(input: {
   year: number;
   month: number;
   departmentId?: string;
+  shiftTypeId?: string;
 }) {
-  const { cycleTimingId, year, month, departmentId } = input;
+  const { cycleTimingId, year, month, departmentId, shiftTypeId } = input;
 
   const employees = await prisma.employee.findMany({
     where: {
       cycleTimingId,
-      departmentId: departmentId || undefined,
+      departmentId: departmentId && departmentId !== "all" ? departmentId : undefined,
+      shiftTypeId: shiftTypeId && shiftTypeId !== "all" ? shiftTypeId : undefined,
       joinedAt: {
         lte: new Date(year, month, 0, 23, 59, 59),
       },
@@ -297,17 +342,63 @@ export async function calculateMonthlyForAllEmployees(input: {
     select: { id: true },
   });
 
+  let count = 0;
   for (const emp of employees) {
-    await calculateOneEmployee({
+    const res = await calculateOneEmployee({
       employeeId: emp.id,
       cycleTimingId,
       year,
       month,
     });
+    if (res) count++;
+  }
+
+  if (count === 0 && employees.length > 0) {
+    return {
+      success: false,
+      message: "Processing skipped: The selected month is not the majority-day Salary Month for this cycle rules.",
+    };
   }
 
   return {
     success: true,
-    message: "Monthly calculation completed",
+    message: `Monthly calculation completed for ${count} eligible employees`,
   };
+}
+
+/* =========================================================
+   UPDATE — MANUAL OVERRIDES
+========================================================= */
+export async function updateMonthlySummary(id: string, data: {
+  overtimeHours?: number;
+  advanceAmount?: number;
+  deductions?: any;
+  netSalary?: number;
+}) {
+  try {
+    const updated = await prisma.monthlyAttendanceSummary.update({
+      where: { id },
+      data: {
+        overtimeHours: data.overtimeHours,
+        advanceAmount: data.advanceAmount,
+        deductions: data.deductions,
+        netSalary: data.netSalary,
+      },
+      include: {
+        employee: true
+      }
+    });
+
+    return {
+      success: true,
+      data: updated,
+      message: "Monthly summary updated successfully"
+    };
+  } catch (error: any) {
+    console.error("Update Summary Error:", error);
+    return {
+      success: false,
+      message: error.message || "Failed to update monthly summary"
+    };
+  }
 }

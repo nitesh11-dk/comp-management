@@ -130,9 +130,9 @@ export default function AddEmployeePage() {
         getCycleTimings(),
       ]);
 
-      if (d.success) setDepartments(d.data);
-      if (s.success) setShiftTypes(s.data);
-      if (c.success) setCycleTimings(c.data);
+      if (d.success) setDepartments(d.data || []);
+      if (s.success) setShiftTypes(s.data || []);
+      if (c.success) setCycleTimings(c.data || []);
 
       setLoadingMaster(false);
     })();
@@ -191,22 +191,12 @@ export default function AddEmployeePage() {
 
   /* ---------------- UI ---------------- */
   return (
-    <div className="p-2 md:p-4 max-w-5xl mx-auto space-y-6">
-      {/* BACK BUTTON */}
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => router.push("/admin/dashboard")}
-        className="flex items-center gap-2"
-      >
-        <ArrowLeft className="h-4 w-4" /> Back to Dashboard
-      </Button>
+    <div className="p-4 md:p-6 lg:p-8 space-y-6">
+      <h1 className="text-2xl font-bold text-slate-900 border-l-4 border-blue-600 pl-4">Add Employee</h1>
 
-      <h1 className="text-2xl font-bold">Add Employee</h1>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Employee Details</CardTitle>
+      <Card className="border-slate-200">
+        <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-3">
+          <CardTitle className="text-sm font-bold text-slate-700">Employee Details</CardTitle>
         </CardHeader>
 
         <CardContent>
@@ -247,7 +237,7 @@ export default function AddEmployeePage() {
                 control={control}
                 items={shiftTypes}
                 nullable
-                render={(s) => `${s.name} (${s.totalHours} hrs)`}
+                render={(s: any) => `${s.name} (${s.totalHours} hrs)`}
               />
 
               <SelectBlock
@@ -256,7 +246,7 @@ export default function AddEmployeePage() {
                 control={control}
                 items={cycleTimings}
                 nullable
-                render={(c) => `${c.name} (Start ${c.startDay})`}
+                render={(c: any) => `${c.name} (Start ${c.startDay})`}
               />
             </div>
 
@@ -313,7 +303,7 @@ export default function AddEmployeePage() {
               </InputBlock>
             </div>
 
-            <Button type="submit" disabled={isSubmitting} className="w-full">
+            <Button type="submit" disabled={isSubmitting} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold">
               {isSubmitting ? "Saving..." : "Create Employee"}
             </Button>
           </form>

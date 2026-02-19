@@ -3,8 +3,22 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useState, useEffect, useRef } from "react";
-import { Menu, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import {
+    LayoutDashboard,
+    Users,
+    Building2,
+    Clock,
+    CalendarDays,
+    Menu,
+    X,
+    LogOut,
+    PlusCircle,
+    FileText,
+    Shield
+} from "lucide-react";
+
+import { DataProvider } from "@/components/providers/DataProvider";
 
 export default function AdminLayout({
     children,
@@ -13,7 +27,16 @@ export default function AdminLayout({
 }) {
     const router = useRouter();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-    const menuRef = useRef<HTMLDivElement>(null);
+
+    const navLinks = [
+        { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
+        { name: "Manage Departments", href: "/admin/dashboard/departments", icon: Building2 },
+        { name: "Manage Shifts", href: "/admin/dashboard/shift-types", icon: Clock },
+        { name: "Manage Cycle Timings", href: "/admin/dashboard/cycle-time", icon: CalendarDays },
+        { name: "Add Employee", href: "/admin/dashboard/addemp", icon: PlusCircle },
+        { name: "Attendance", href: "/admin/dashboard/attendance", icon: FileText },
+        { name: "Manage Supervisors", href: "/admin/dashboard/supervisors", icon: Shield },
+    ];
 
     const handleLogout = async () => {
         try {
@@ -26,78 +49,106 @@ export default function AdminLayout({
         }
     };
 
-    // Close menu if clicked outside
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-                setMobileMenuOpen(false);
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
-    }, []);
-
     return (
-        <div className="flex min-h-screen flex-col bg-gray-50">
-            {/* 🔹 Top Navbar */}
-            <header className="w-full bg-white shadow-sm border-b border-gray-200 px-6 py-4 flex justify-between items-center relative">
-                <div className="text-xl font-bold text-gray-900">Admin Panel</div>
+        <DataProvider>
+            <div className="flex min-h-screen bg-gray-50 overflow-hidden">
+                {/* 🔹 FIXED SIDEBAR (Desktop) */}
+                <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200 fixed h-full z-30">
+                    <div className="p-6 border-b border-gray-100 italic">
+                        <div className="text-2xl font-black text-gray-900 tracking-tighter">Manpower<span className="text-blue-600">Pro</span></div>
+                        <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Admin Dashboard</div>
+                    </div>
 
-                {/* Desktop Menu */}
-                <div className="hidden sm:flex gap-3">
-                    <Link
-                        href="/admin/dashboard/addemp"
-                        className="py-2 px-4 bg-gray-900 text-white rounded-md hover:bg-gray-800 transition-colors duration-200 font-medium"
-                    >
-                        Add Employee
-                    </Link>
+                    <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+                        {navLinks.map((link) => {
+                            const Icon = link.icon;
+                            return (
+                                <Link
+                                    key={link.href}
+                                    href={link.href}
+                                    className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-600 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-all group"
+                                >
+                                    <Icon className="h-5 w-5 text-gray-400 group-hover:text-blue-600" />
+                                    {link.name}
+                                </Link>
+                            );
+                        })}
+                    </nav>
 
-                    <button
-                        onClick={handleLogout}
-                        className="py-2 px-4 bg-gray-100 text-gray-900 rounded-md hover:bg-gray-200 transition-colors duration-200 font-medium border border-gray-300"
-                    >
-                        Logout
-                    </button>
-                </div>
-
-                {/* Mobile Hamburger */}
-                <button
-                    className="sm:hidden p-2 rounded-md bg-gray-100 hover:bg-gray-200 transition-colors duration-200 border border-gray-300"
-                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                >
-                    {mobileMenuOpen ? <X className="h-5 w-5 text-gray-700" /> : <Menu className="h-5 w-5 text-gray-700" />}
-                </button>
-
-                {/* Mobile Menu Dropdown */}
-                {mobileMenuOpen && (
-                    <div
-                        ref={menuRef}
-                        className="absolute right-6 top-full mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg flex flex-col z-20 sm:hidden"
-                    >
-                        <Link
-                            href="/admin/dashboard/addemp"
-                            className="px-4 py-3 hover:bg-gray-50 text-gray-900 border-b border-gray-100 font-medium"
-                            onClick={() => setMobileMenuOpen(false)}
-                        >
-                            Add Employee
-                        </Link>
+                    <div className="p-4 border-t border-gray-100">
                         <button
-                            onClick={() => {
-                                setMobileMenuOpen(false);
-                                handleLogout();
-                            }}
-                            className="px-4 py-3 hover:bg-gray-50 text-gray-900 text-left font-medium"
+                            onClick={handleLogout}
+                            className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-all group"
                         >
+                            <LogOut className="h-5 w-5" />
                             Logout
                         </button>
                     </div>
-                )}
-            </header>
+                </aside>
 
-            {/* 🔹 Content Area */}
-            <main className="flex-1 p-4">{children}</main>
-        </div>
+                {/* 🔹 MOBILE OVERLAY */}
+                {mobileMenuOpen && (
+                    <div
+                        className="md:hidden fixed inset-0 bg-black/50 z-40 transition-opacity"
+                        onClick={() => setMobileMenuOpen(false)}
+                    />
+                )}
+
+                {/* 🔹 MOBILE SIDEBAR */}
+                <aside
+                    className={`md:hidden fixed inset-y-0 left-0 w-64 bg-white z-50 transform transition-transform duration-300 ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+                        }`}
+                >
+                    <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                        <div className="text-xl font-black text-gray-900 tracking-tighter">Manpower<span className="text-blue-600">Pro</span></div>
+                        <button onClick={() => setMobileMenuOpen(false)}>
+                            <X className="h-6 w-6 text-gray-400" />
+                        </button>
+                    </div>
+                    <nav className="p-4 space-y-2">
+                        {navLinks.map((link) => {
+                            const Icon = link.icon;
+                            return (
+                                <Link
+                                    key={link.href}
+                                    href={link.href}
+                                    onClick={() => setMobileMenuOpen(false)}
+                                    className="flex items-center gap-3 px-4 py-4 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-50 active:bg-blue-50 transition-all font-semibold"
+                                >
+                                    <Icon className="h-5 w-5" />
+                                    {link.name}
+                                </Link>
+                            );
+                        })}
+                        <button
+                            onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
+                            className="flex items-center gap-3 w-full px-4 py-4 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-all"
+                        >
+                            <LogOut className="h-5 w-5" />
+                            Logout
+                        </button>
+                    </nav>
+                </aside>
+
+                {/* 🔹 MAIN CONTENT WRAPPER */}
+                <div className="flex-1 md:ml-64 w-full max-w-full flex flex-col min-h-screen relative overflow-x-hidden">
+                    {/* 🔹 STICKY TOP NAVIGATION (For Mobile Header) */}
+                    <header className="md:hidden h-16 bg-white border-b border-gray-200 px-6 flex items-center justify-between sticky top-0 z-20">
+                        <div className="text-xl font-black text-gray-900 tracking-tighter">Manpower<span className="text-blue-600">Pro</span></div>
+                        <button
+                            onClick={() => setMobileMenuOpen(true)}
+                            className="p-2 -mr-2 text-gray-400 hover:text-gray-900"
+                        >
+                            <Menu className="h-6 w-6" />
+                        </button>
+                    </header>
+
+                    {/* 🔹 PAGE CONTENT */}
+                    <main className="flex-1 overflow-auto">
+                        {children}
+                    </main>
+                </div>
+            </div>
+        </DataProvider>
     );
 }

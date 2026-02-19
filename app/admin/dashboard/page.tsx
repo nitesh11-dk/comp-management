@@ -4,7 +4,7 @@ import { useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 
-import CombinedEmployeeDashboard from "@/components/admin/employee-management";
+import { CombinedEmployeeDashboard } from "@/components/admin/employee-management";
 import { createFakeEmployees } from "@/actions/createFakeEmployee";
 
 const Page = () => {
@@ -31,35 +31,7 @@ const Page = () => {
       {/* ===============================
          TOP ACTION BAR
       =============================== */}
-      <div className="flex flex-wrap gap-3 items-center">
-        {/* QUICK NAV BUTTONS */}
-        <Button
-          variant="outline"
-          onClick={() => router.push("/admin/dashboard/departments")}
-        >
-          Manage Departments
-        </Button>
 
-        {/* <Button
-          disabled={isPending}
-          onClick={handleCreateFakeEmployees}
-        >
-          {isPending ? "Creating..." : "Create Fake Employees"}
-        </Button> */}
-
-        <Button
-          variant="outline"
-          onClick={() => router.push("/admin/dashboard/shift-types")}
-        >
-          Manage Shifts
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => router.push("/admin/dashboard/cycle-time")}
-        >
-          Cycle Timing
-        </Button>
-      </div>
 
       {/* ===============================
          MAIN CONTENT - COMBINED DASHBOARD
