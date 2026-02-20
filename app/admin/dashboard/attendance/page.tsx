@@ -202,8 +202,10 @@ export default function AttendancePage() {
         // Department filter (should match returned summary)
         const matchesDept = selectedDept === "all" || r.departmentId === selectedDept;
         
-        // Supervisor filter
-        const matchesSupervisor = selectedSupervisor === "all" || r.supervisorId === selectedSupervisor;
+        // Supervisor filter - ensure we only filter if supervisor is selected and supervisorId exists
+        const matchesSupervisor = 
+            selectedSupervisor === "all" || 
+            (r.supervisorId && r.supervisorId === selectedSupervisor);
         
         // Search by name or employee code (case-insensitive)
         const searchLower = search.toLowerCase().trim();
