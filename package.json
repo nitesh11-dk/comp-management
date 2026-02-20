@@ -49,6 +49,7 @@
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.10",
     "embla-carousel-react": "^8.5.1",
+    "exceljs": "^4.4.0",
     "html2canvas": "^1.4.1",
     "html5-qrcode": "^2.3.8",
     "input-otp": "^1.4.1",
@@ -74,15 +75,15 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
-    "prisma": "^6.19.0",
-    "typescript": "^5.3.3",
-    "eslint": "^8.57.0",
-    "eslint-config-next": "14.2.16",
-    "postcss": "^8.4.38",
-    "tailwindcss": "^3.4.15",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20.11.30",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
-    "@types/jsonwebtoken": "^9.0.10"
+    "eslint": "^8.57.0",
+    "eslint-config-next": "14.2.16",
+    "postcss": "^8.4.38",
+    "prisma": "^6.19.0",
+    "tailwindcss": "^3.4.15",
+    "typescript": "^5.3.3"
   }
 }

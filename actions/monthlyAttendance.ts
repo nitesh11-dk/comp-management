@@ -79,18 +79,13 @@ export async function getEmployeesWithMonthlySummary(input: {
 
   // 4️⃣ Fetch employees with filtering
   //
-  // When "all" cycles: include employees with a matching cycleTimingId OR with no cycle (null)
-  // When a specific cycle: only that cycle
-  // Department / Shift: when "all", pass undefined → no filter (Prisma includes nulls naturally)
+  // IMPORTANT: When "all" cycles is selected, include ALL employees regardless of their assigned cycle
+  // The cycle filtering should only apply to the summary data, not to the employee list
+  // This ensures all 96 employees are always shown when viewing with "all" cycles
   const cycleFilter =
     cycleTimingId && cycleTimingId !== "all"
-      ? { cycleTimingId }
-      : {
-        OR: [
-          { cycleTimingId: { in: validCycles.map((v) => v.cycleTimingId) } },
-          { cycleTimingId: null },
-        ],
-      };
+      ? { cycleTimingId } // Specific cycle: only employees assigned to that cycle
+      : {}; // "all" cycles: include ALL employees (no filter)
 
   const deptFilter =
     departmentId && departmentId !== "all"

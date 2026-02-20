@@ -26,6 +26,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { useDataCache } from "@/components/providers/DataProvider";
+import { exportToExcelServer } from "@/lib/excel-export-server";
 
 import { DashboardHeader } from "./dashboard/DashboardHeader";
 import { FilterBar } from "./dashboard/FilterBar";
@@ -151,7 +152,9 @@ export function CombinedEmployeeDashboard() {
   ============================ */
   const [loading, setLoading] = useState(false);
   const [recalcLoading, setRecalcLoading] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false); // Track if data has been loaded at least once
   const isBusy = loading || recalcLoading !== null;
 
   /* ============================
@@ -296,6 +299,7 @@ export function CombinedEmployeeDashboard() {
         });
       }
       setRows(finalRows);
+      setHasLoadedOnce(true); // Mark that we've loaded data
       return;
     }
 
@@ -329,6 +333,7 @@ export function CombinedEmployeeDashboard() {
       }
 
       setRows(finalRows);
+      setHasLoadedOnce(true); // Mark that we've successfully loaded data
     } catch (err: any) {
       console.error("Dashboard Load Error:", err);
       toast.error(err.message || "Failed to load dashboard data");
@@ -437,6 +442,99 @@ export function CombinedEmployeeDashboard() {
   };
 
   /* ============================
+     EXPORT TO EXCEL
+  ============================ */
+  const handleExportExcel = async () => {
+    if (!appliedFilters || rows.length === 0) {
+      toast.error("No data to export");
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      // Get cycle dates from appliedFilters
+      let cycleStart: Date | undefined;
+      let cycleEnd: Date | undefined;
+
+      if (appliedFilters.cycleId !== "all") {
+        // Single cycle selected
+        const selectedCycle = cycles.find((c) => c.id === appliedFilters.cycleId);
+        if (selectedCycle) {
+          // Calculate dates based on cycle timing
+          const refDate = new Date(appliedFilters.year, appliedFilters.month - 1, 15);
+          const startDay = selectedCycle.startDay;
+          const endDay = selectedCycle.endDay;
+
+          cycleStart = new Date(
+            appliedFilters.year,
+            appliedFilters.month - 1,
+            startDay
+          );
+          cycleStart.setHours(0, 0, 0, 0);
+
+          const endMonth =
+            selectedCycle.span === "SAME_MONTH" ? appliedFilters.month : appliedFilters.month + 1;
+          const endYear =
+            endMonth > 12 ? appliedFilters.year + 1 : appliedFilters.year;
+          const actualEndMonth = endMonth > 12 ? endMonth - 12 : endMonth;
+
+          cycleEnd = new Date(endYear, actualEndMonth - 1, endDay);
+          cycleEnd.setHours(23, 59, 59, 999);
+        }
+      } else {
+        // All cycles - use month start and end
+        cycleStart = new Date(appliedFilters.year, appliedFilters.month - 1, 1);
+        cycleStart.setHours(0, 0, 0, 0);
+        cycleEnd = new Date(appliedFilters.year, appliedFilters.month, 0);
+        cycleEnd.setHours(23, 59, 59, 999);
+      }
+
+      // Call server action to generate Excel
+      const uint8Array = await exportToExcelServer({
+        rows,
+        columnVisibility,
+        month: appliedFilters.month,
+        year: appliedFilters.year,
+        cycleStart,
+        cycleEnd,
+      });
+
+      // Decode base64 string to Uint8Array
+      const binaryString = atob(uint8Array);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      // Convert to blob and download
+      const blob = new Blob([bytes], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      
+      const monthNames = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December",
+      ];
+      const monthName = monthNames[appliedFilters.month - 1] || "Unknown";
+      const fileName = `Attendance_${monthName}_${appliedFilters.year}.xlsx`;
+      
+      link.href = url;
+      link.download = fileName;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      toast.success(`Excel file "${fileName}" downloaded successfully!`);
+    } catch (err: any) {
+      console.error("Export Error:", err);
+      toast.error(err.message || "Failed to export to Excel");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  /* ============================
      DOWNLOAD BARCODE
   ============================ */
   const downloadBarcode = async (empId: string, empCode: string) => {
@@ -459,21 +557,6 @@ export function CombinedEmployeeDashboard() {
   /* ============================
      RENDER
   ============================ */
-  if (initialLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-24 gap-4 animate-in fade-in duration-500">
-        <div className="relative">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-          <Calculator className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-5 w-5 text-indigo-400 opacity-50" />
-        </div>
-        <div className="flex flex-col items-center gap-1">
-          <span className="text-lg font-semibold text-slate-700">Loading Dashboard</span>
-          <span className="text-sm text-slate-400">Fetching employees and master data...</span>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col h-full w-full max-w-full bg-slate-50/50">
       {/* 🔹 STICKY TOP FILTER BAR */}
@@ -543,6 +626,9 @@ export function CombinedEmployeeDashboard() {
             barcodeRefs={barcodeRefs}
             isBusy={isBusy}
             cycles={cycles}
+            onExportExcel={handleExportExcel}
+            isExporting={isExporting}
+            hasLoadedOnce={hasLoadedOnce}
           />
         </div>
       </div>

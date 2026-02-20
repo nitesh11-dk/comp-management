@@ -2,7 +2,10 @@
 
 import { useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
 import { EmployeeRow } from "./EmployeeRow";
+import { TableSkeletonWithSpinner } from "./TableSkeleton";
 
 interface Row {
   employee: any;
@@ -19,6 +22,9 @@ interface EmployeeTableProps {
   barcodeRefs: any;
   isBusy: boolean;
   cycles: any[];
+  onExportExcel?: () => void;
+  isExporting?: boolean;
+  hasLoadedOnce?: boolean; // Add this prop
 }
 
 export function EmployeeTable({
@@ -31,6 +37,9 @@ export function EmployeeTable({
   barcodeRefs,
   isBusy,
   cycles,
+  onExportExcel,
+  isExporting,
+  hasLoadedOnce = false,
 }: EmployeeTableProps) {
   /* ============================
      TABLE SCROLLING (DRAG TO SCROLL)
@@ -60,23 +69,57 @@ export function EmployeeTable({
 
   const getCycleById = (id: string) => cycles.find((c) => c.id === id);
 
+  const visibleColumnCount = Object.values(columnVisibility).filter(Boolean)
+    .length;
+
   return (
     <Card className="w-full max-w-full border-slate-200 shadow-xl shadow-slate-200/50 overflow-hidden ring-1 ring-slate-200">
       <CardContent className="p-0">
-        <div
-          ref={scrollRef}
-          className="relative w-full overflow-auto max-h-[calc(100vh-260px)] md:max-h-[calc(100vh-280px)] cursor-grab active:cursor-grabbing select-none scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent touch-pan-x"
-          onMouseDown={handleMouseDown}
-          onMouseLeave={handleMouseLeave}
-          onMouseUp={handleMouseUp}
-          onMouseMove={handleMouseMove}
-        >
-          <table className="min-w-full w-max table-fixed text-sm border-separate border-spacing-0">
-            {/* HEADER ONLY STICKY ON TOP */}
-            <thead className="sticky top-0 z-20">
+        {/* Export Button Header */}
+        <div className="flex justify-end items-center px-4 py-3 border-b border-slate-200 bg-slate-50/50">
+          <Button
+            onClick={onExportExcel}
+            disabled={loading || isExporting || rows.length === 0}
+            variant="outline"
+            size="sm"
+            className="gap-2 bg-white hover:bg-blue-50 border-blue-200 text-blue-700 hover:text-blue-900"
+          >
+            <Download className="h-4 w-4" />
+            {isExporting ? "Exporting..." : "Export to Excel"}
+          </Button>
+        </div>
+
+        {/* LOADING STATE - FULL SKELETON */}
+        {loading || !hasLoadedOnce ? (
+          <div className="w-full">
+            <TableSkeletonWithSpinner />
+          </div>
+        ) : rows.length === 0 ? (
+          /* EMPTY STATE - Only show after data has loaded */
+          <div className="w-full px-4 py-12">
+            <div className="flex flex-col items-center gap-3 justify-center">
+              <div className="text-5xl opacity-20">📭</div>
+              <div className="text-center">
+                <p className="text-sm font-semibold text-slate-600">No employees found</p>
+                <p className="text-xs text-slate-400 mt-1">Try adjusting your filters</p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div
+            ref={scrollRef}
+            className="relative w-full overflow-auto max-h-[calc(100vh-260px)] md:max-h-[calc(100vh-280px)] cursor-grab active:cursor-grabbing select-none scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent touch-pan-x"
+            onMouseDown={handleMouseDown}
+            onMouseLeave={handleMouseLeave}
+            onMouseUp={handleMouseUp}
+            onMouseMove={handleMouseMove}
+          >
+            <table className="min-w-full w-max table-fixed text-sm border-separate border-spacing-0">
+              {/* HEADER (TOP STICKY ONLY) */}
+              <thead className="sticky top-0 z-20">
               <tr className="bg-slate-50 border-b border-slate-200">
                 {columnVisibility.name && (
-                  <th className="bg-slate-50 w-[150px] md:w-[180px] px-3 md:px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase whitespace-nowrap border-r border-slate-200">
+                  <th className="w-[150px] md:w-[180px] px-3 md:px-4 py-3 text-left text-xs font-semibold text-slate-900 uppercase whitespace-nowrap border-r border-slate-200 bg-slate-50">
                     Name
                   </th>
                 )}
@@ -204,29 +247,30 @@ export function EmployeeTable({
             </thead>
 
             <tbody className="bg-white divide-y divide-gray-100">
-              {!loading &&
-                rows.map(({ employee, summary }) => {
-                  const cycle = getCycleById(employee.cycleTimingId);
-                  return (
-                    <EmployeeRow
-                      key={`${employee.id}-${summary?.cycleStart || "no-summary"}`}
-                      employee={employee}
-                      summary={summary}
-                      columnVisibility={columnVisibility}
-                      recalcLoading={recalcLoading}
-                      isBusy={isBusy}
-                      onRecalc={onRecalc}
-                      onDownloadBarcode={onDownloadBarcode}
-                      barcodeRef={(el) => {
-                        barcodeRefs.current[employee.id] = el;
-                      }}
-                      cycleName={cycle?.name}
-                    />
-                  );
-                })}
+              {/* DATA ROWS */}
+              {rows.map(({ employee, summary }) => {
+                const cycle = getCycleById(employee.cycleTimingId);
+                return (
+                  <EmployeeRow
+                    key={`${employee.id}-${summary?.cycleStart || "no-summary"}`}
+                    employee={employee}
+                    summary={summary}
+                    columnVisibility={columnVisibility}
+                    recalcLoading={recalcLoading}
+                    isBusy={isBusy}
+                    onRecalc={onRecalc}
+                    onDownloadBarcode={onDownloadBarcode}
+                    barcodeRef={(el) => {
+                      barcodeRefs.current[employee.id] = el;
+                    }}
+                    cycleName={cycle?.name}
+                  />
+                );
+              })}
             </tbody>
           </table>
-        </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
