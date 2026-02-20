@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
-import Link from "next/link";
 import { loginUser } from "@/actions/login"; // server action
 import { toast } from "sonner";
 
@@ -95,12 +94,6 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="mt-4 text-sm text-center text-gray-700">
-          Don&apos;t have an account?{" "}
-          <Link href="/register" className="text-indigo-600 hover:underline">
-            Register here
-          </Link>
-        </p>
       </div>
     </div>
   );

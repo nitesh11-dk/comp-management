@@ -14,9 +14,12 @@ import {
     RefreshCw,
     TrendingUp,
     AlertCircle,
+    Download,
 } from "lucide-react";
 import { getDailyAttendanceSummary, DailySummary, DailyEmployeeRecord } from "@/actions/dailyAttendance";
 import { getDepartments } from "@/actions/department";
+import { exportDailyAttendanceToExcel } from "@/lib/daily-attendance-export";
+import { toast } from "sonner";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Department {
@@ -78,12 +81,31 @@ function AttendanceRow({ rec, index }: { rec: DailyEmployeeRecord; index: number
                 <div className="text-xs text-slate-400 font-mono">{rec.empCode}</div>
             </td>
 
-            {/* Department */}
+            {/* Employee Department */}
             <td className="hidden md:table-cell px-4 py-3 text-sm text-slate-600 whitespace-nowrap">
                 <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-600 rounded-full px-2 py-0.5 text-xs font-medium">
                     <Building2 className="h-3 w-3" />
                     {rec.departmentName}
                 </span>
+            </td>
+
+            {/* Supervisor + Department (CROSS-DEPARTMENT INDICATOR) */}
+            <td className="hidden lg:table-cell px-4 py-3 text-sm whitespace-nowrap">
+                {rec.supervisorName ? (
+                    <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                            {rec.isCrossDepartment && (
+                                <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 border border-red-300 rounded-full px-2 py-0.5 text-xs font-bold animate-pulse">
+                                    ⚠️ CROSS-DEPT
+                                </span>
+                            )}
+                            <span className="text-sm font-medium text-slate-700">{rec.supervisorName}</span>
+                        </div>
+                        <span className="text-xs text-slate-500">{rec.supervisorDepartmentName || "—"}</span>
+                    </div>
+                ) : (
+                    <span className="text-slate-300">—</span>
+                )}
             </td>
 
             {/* Status */}
@@ -145,10 +167,12 @@ export default function AttendancePage() {
     const today = format(new Date(), "yyyy-MM-dd");
     const [selectedDate, setSelectedDate] = useState(today);
     const [selectedDept, setSelectedDept] = useState<string>("all");
+    const [selectedSupervisor, setSelectedSupervisor] = useState<string>("all");
     const [departments, setDepartments] = useState<Department[]>([]);
     const [summary, setSummary] = useState<DailySummary | null>(null);
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<"all" | "present" | "absent">("all");
+    const [isExporting, setIsExporting] = useState(false);
     const [isPending, startTransition] = useTransition();
 
     // Load departments once
@@ -175,22 +199,81 @@ export default function AttendancePage() {
 
     // Filtered records
     const filteredRecords = (summary?.records ?? []).filter((r) => {
+        // Department filter (should match returned summary)
+        const matchesDept = selectedDept === "all" || r.departmentId === selectedDept;
+        
+        // Supervisor filter
+        const matchesSupervisor = selectedSupervisor === "all" || r.supervisorId === selectedSupervisor;
+        
+        // Search by name or employee code (case-insensitive)
+        const searchLower = search.toLowerCase().trim();
         const matchesSearch =
-            !search ||
-            r.name.toLowerCase().includes(search.toLowerCase()) ||
-            r.empCode.toLowerCase().includes(search.toLowerCase());
+            !searchLower ||
+            r.name.toLowerCase().includes(searchLower) ||
+            r.empCode.toLowerCase().includes(searchLower);
+        
+        // Status filter
         const matchesStatus =
             statusFilter === "all" ||
             (statusFilter === "present" && r.isPresent) ||
             (statusFilter === "absent" && !r.isPresent);
-        return matchesSearch && matchesStatus;
+        
+        return matchesDept && matchesSupervisor && matchesSearch && matchesStatus;
     });
+
+    // Get unique supervisors from records
+    const uniqueSupervisors = Array.from(
+        new Map(
+            (summary?.records ?? [])
+                .filter((r) => r.supervisorId && r.supervisorName)
+                .map((r) => [r.supervisorId, { id: r.supervisorId, name: r.supervisorName }])
+        ).values()
+    );
 
     const presentPct = summary
         ? summary.totalEmployees > 0
             ? Math.round((summary.presentCount / summary.totalEmployees) * 100)
             : 0
         : 0;
+
+    // Export handler
+    const handleExportExcel = async () => {
+        try {
+            setIsExporting(true);
+            const base64Data = await exportDailyAttendanceToExcel({
+                records: filteredRecords,
+                date: selectedDate,
+                selectedDept: selectedDept !== "all" ? selectedDept : undefined,
+                selectedSupervisor: selectedSupervisor !== "all" ? selectedSupervisor : undefined,
+            });
+
+            // Decode base64 and create blob
+            const binaryString = atob(base64Data);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+
+            const blob = new Blob([bytes], {
+                type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            });
+
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            const dateStr = format(parseISO(selectedDate), "dd-MMM-yyyy");
+            link.href = url;
+            link.download = `Daily_Attendance_${dateStr}.xlsx`;
+            link.click();
+            URL.revokeObjectURL(url);
+
+            toast.success("Daily attendance exported successfully!");
+        } catch (err: any) {
+            console.error("Export Error:", err);
+            toast.error(err.message || "Failed to export attendance data");
+        } finally {
+            setIsExporting(false);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30 p-3 md:p-6 lg:p-8">
@@ -219,11 +302,20 @@ export default function AttendancePage() {
                         <RefreshCw className={`h-4 w-4 ${isPending ? "animate-spin" : ""}`} />
                         <span className="hidden sm:inline">Refresh</span>
                     </button>
+                    
+                    <button
+                        onClick={handleExportExcel}
+                        disabled={isPending || isExporting || !summary || filteredRecords.length === 0}
+                        className="flex items-center gap-2 px-3 md:px-4 py-2 text-sm font-semibold text-green-600 bg-green-50 border border-green-200 rounded-xl hover:bg-green-100 active:scale-95 transition-all disabled:opacity-50 self-start sm:self-auto"
+                    >
+                        <Download className="h-4 w-4" />
+                        <span className="hidden sm:inline">{isExporting ? "Exporting..." : "Export"}</span>
+                    </button>
                 </div>
 
                 {/* ── Filters ── */}
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-5">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                         {/* Date */}
                         <div className="space-y-1.5">
                             <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
@@ -258,8 +350,28 @@ export default function AttendancePage() {
                             </div>
                         </div>
 
+                        {/* Supervisor */}
+                        <div className="space-y-1.5">
+                            <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                                <Users className="h-3 w-3" /> Supervisor
+                            </label>
+                            <div className="relative">
+                                <select
+                                    value={selectedSupervisor}
+                                    onChange={(e) => setSelectedSupervisor(e.target.value)}
+                                    className="w-full h-10 pl-3 pr-9 text-sm rounded-xl border border-slate-200 bg-white text-slate-800 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                >
+                                    <option value="all">All Supervisors</option>
+                                    {uniqueSupervisors.map((sup) => (
+                                        <option key={sup.id} value={sup.id}>{sup.name}</option>
+                                    ))}
+                                </select>
+                                <ChevronDown className="pointer-events-none absolute right-3 top-3 h-4 w-4 text-slate-400" />
+                            </div>
+                        </div>
+
                         {/* Search */}
-                        <div className="space-y-1.5 sm:col-span-2 lg:col-span-1">
+                        <div className="space-y-1.5">
                             <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
                                 <Search className="h-3 w-3" /> Search Employee
                             </label>
@@ -272,6 +384,14 @@ export default function AttendancePage() {
                                     onChange={(e) => setSearch(e.target.value)}
                                     className="w-full h-10 pl-9 pr-3 text-sm rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                 />
+                                {search && (
+                                    <button
+                                        onClick={() => setSearch("")}
+                                        className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 transition-colors"
+                                    >
+                                        ✕
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -410,7 +530,8 @@ export default function AttendancePage() {
                                     <tr className="bg-slate-50 border-b border-slate-200">
                                         <th className="sticky left-0 z-10 bg-slate-50 px-3 py-3 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider w-10 border-r border-slate-200">#</th>
                                         <th className="px-3 md:px-4 py-3 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Employee</th>
-                                        <th className="hidden md:table-cell px-4 py-3 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Department</th>
+                                        <th className="hidden md:table-cell px-4 py-3 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Emp Dept</th>
+                                        <th className="hidden lg:table-cell px-4 py-3 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Supervisor (Scan Dept)</th>
                                         <th className="px-3 md:px-4 py-3 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Status</th>
                                         <th className="hidden sm:table-cell px-3 md:px-4 py-3 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">First In</th>
                                         <th className="hidden sm:table-cell px-3 md:px-4 py-3 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Last Out</th>

@@ -8,6 +8,11 @@ export interface DailyEmployeeRecord {
     name: string;
     departmentId: string;
     departmentName: string;
+    supervisorId: string | null; // Who scanned the attendance
+    supervisorName: string | null;
+    supervisorDepartmentId: string | null; // Which dept the supervisor belongs to
+    supervisorDepartmentName: string | null;
+    isCrossDepartment: boolean; // Red flag: supervisor dept ≠ employee dept
     isPresent: boolean;
     firstIn: Date | null;
     lastOut: Date | null;
@@ -31,12 +36,16 @@ export async function getDailyAttendanceSummary(
     date: string, // "YYYY-MM-DD"
     departmentId: string | null
 ): Promise<DailySummary> {
-    const dayStart = new Date(`${date}T00:00:00.000Z`);
-    const dayEnd = new Date(`${date}T23:59:59.999Z`);
+    // Parse date properly in local timezone
+    const [year, month, day] = date.split('-').map(Number);
+    const dayStart = new Date(year, month - 1, day, 0, 0, 0, 0);
+    const dayEnd = new Date(year, month - 1, day, 23, 59, 59, 999);
 
     // Fetch all employees (optionally filtered by dept)
     const employees = await prisma.employee.findMany({
-        where: departmentId ? { departmentId } : {},
+        where: {
+            ...(departmentId && departmentId !== "all" ? { departmentId } : {}),
+        },
         select: {
             id: true,
             empCode: true,
@@ -56,7 +65,16 @@ export async function getDailyAttendanceSummary(
                             timestamp: true,
                             scanType: true,
                             departmentId: true,
+                            scannedBy: true,
                             autoClosed: true,
+                            user: {
+                                select: {
+                                    id: true,
+                                    username: true,
+                                    departmentId: true,
+                                    department: { select: { name: true } },
+                                },
+                            },
                         },
                     },
                 },
@@ -68,6 +86,16 @@ export async function getDailyAttendanceSummary(
     const records: DailyEmployeeRecord[] = employees.map((emp) => {
         const entries = emp.attendanceWallet?.entries ?? [];
         const isPresent = entries.length > 0;
+
+        // Get supervisor info from first entry (who initiated the scan)
+        const firstEntry = entries[0];
+        const supervisorId = firstEntry?.scannedBy ?? null;
+        const supervisorName = (firstEntry?.user as any)?.username ?? null;
+        const supervisorDepartmentId = (firstEntry?.user as any)?.departmentId ?? null;
+        const supervisorDepartmentName = (firstEntry?.user as any)?.department?.name ?? null;
+
+        // Check if cross-department (supervisor's dept ≠ employee's dept)
+        const isCrossDepartment = isPresent && supervisorDepartmentId && supervisorDepartmentId !== emp.departmentId;
 
         // Calculate hours worked using IN/OUT pairs
         let totalMinutes = 0;
@@ -114,6 +142,11 @@ export async function getDailyAttendanceSummary(
             name: emp.name,
             departmentId: emp.departmentId,
             departmentName: emp.department?.name ?? "Unknown",
+            supervisorId,
+            supervisorName,
+            supervisorDepartmentId,
+            supervisorDepartmentName,
+            isCrossDepartment,
             isPresent,
             firstIn,
             lastOut,
