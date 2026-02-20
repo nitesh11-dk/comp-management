@@ -101,7 +101,7 @@ export function EmployeeRow({
     return (
         <tr className={`bg-white hover:bg-gray-100 transition-colors cursor-pointer border-b border-gray-100 ${isUnassigned ? 'border-l-2 border-l-red-400' : ''}`}>
             {columnVisibility.name && (
-                <td className={`sticky left-0 z-10 w-[150px] md:w-[180px] max-w-[150px] md:max-w-[180px] px-3 md:px-4 py-3 whitespace-nowrap font-medium text-gray-900 border-r border-gray-50 shadow-[2px_0_4px_-1px_rgba(0,0,0,0.06)] ${isUnassigned ? 'bg-red-50/60' : 'bg-white'}`}>
+                <td className={` w-[150px] md:w-[180px] max-w-[150px] md:max-w-[180px] px-3 md:px-4 py-3 whitespace-nowrap font-medium text-gray-900 border-r  `}>
                     <div className="flex flex-col gap-0.5 truncate">
                         <span className="truncate">{employee.name}</span>
                         {isUnassigned && (
@@ -114,7 +114,7 @@ export function EmployeeRow({
             )}
 
             {columnVisibility.empCode && (
-                <td className="w-[120px] max-w-[120px] px-4 py-3 whitespace-nowrap truncate text-gray-600 border-r border-gray-50 uppercase font-mono text-xs">
+                <td className="w-[120px] max-w-[120px] px-4 py-3 whitespace-nowrap truncate text-gray-600 border-r border-gray-50 uppercase font-mono text-md font-semibold">
                     {employee.empCode}
                 </td>
             )}
