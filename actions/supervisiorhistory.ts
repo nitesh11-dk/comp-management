@@ -6,11 +6,13 @@ import { getUserFromCookies } from "@/lib/auth";
 export type SupervisorScanLog = {
     employeeId: string;
     employeeName: string;
+    employeeCode: string;
     departmentId: string;
     departmentName: string;
     scanType: "in" | "out";
     timestamp: Date;
     autoClosed?: boolean;
+    isCrossDepartment?: boolean;
 };
 
 export async function getSupervisorScans(): Promise<SupervisorScanLog[]> {
@@ -23,7 +25,11 @@ export async function getSupervisorScans(): Promise<SupervisorScanLog[]> {
     // 🔹 Fetch all wallets + entries scanned by this supervisor
     const wallets = await prisma.attendanceWallet.findMany({
         include: {
-            employee: true, // get employee.name
+            employee: {
+                include: {
+                    department: true, // Include employee's department
+                }
+            },
             entries: {
                 include: {
                     department: true, // get department.name
@@ -39,16 +45,19 @@ export async function getSupervisorScans(): Promise<SupervisorScanLog[]> {
         for (const entry of wallet.entries) {
             if (entry.scannedBy !== supervisorId) continue;
 
+            // Cross department logic
+            const isCrossDepartment = wallet.employee?.departmentId && entry.departmentId && wallet.employee.departmentId !== entry.departmentId;
+
             logs.push({
                 employeeId: wallet.employeeId,
                 employeeName: wallet.employee?.name ?? "Unknown",
-
-                departmentId: entry.departmentId ?? "",
-                departmentName: entry.department?.name ?? "Unknown",
-
+                employeeCode: wallet.employee?.empCode ?? "",
+                departmentId: wallet.employee?.departmentId ?? "",
+                departmentName: wallet.employee?.department?.name ?? "Unknown",
                 scanType: entry.scanType as "in" | "out",
                 timestamp: entry.timestamp,
                 autoClosed: entry.autoClosed ?? false,
+                isCrossDepartment,
             });
         }
     }
